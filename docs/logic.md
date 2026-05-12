@@ -43,7 +43,7 @@ XORNumberCipher.buildXorRows(message, key, limit)
 
 `XORCipherTool` is an alias of the same API for compatibility with earlier demo code.
 
-For engineer/agent usage, `encode()` and `decode()` are the preferred API. `encode()` keeps number-only best mode by default. `decode()` auto-detects number-only and compact `XC1` formats.
+For engineer/agent usage, `encode()` and `decode()` are the preferred API. `encode()` keeps number-only best mode by default. `decode()` auto-detects number-only, compact `XC1` Base64URL, and compact `XC2` Base85 formats.
 
 The library also supports CommonJS:
 
@@ -126,7 +126,7 @@ Compact text mode is optional. It is intended for engineers, AI agents, and user
 The compact pipeline is:
 
 ```text
-compress plaintext -> XOR by key -> Base64URL encode
+compress plaintext -> XOR by key -> Base64URL or Base85 encode
 ```
 
 Supported compact headers:
@@ -136,19 +136,24 @@ XC1R = raw XOR bytes
 XC1G = gzip plaintext, then XOR
 XC1D = deflate-raw plaintext, then XOR
 XC1B = brotli plaintext, then XOR when supported
+XC2R = raw XOR bytes, encoded as Base85
+XC2G = gzip plaintext, then XOR, encoded as Base85
+XC2D = deflate-raw plaintext, then XOR, encoded as Base85
+XC2B = brotli plaintext, then XOR, encoded as Base85 when supported
 ```
 
 Example output:
 
 ```text
 XC1G.A1b2_cd-...
+XC2G.87cURD]i,...
 ```
 
-`encodeCompact()` compares supported compact candidates and selects the shortest. `deflate-raw` and brotli are optional because browser and Node support varies.
+`encodeCompact()` compares supported compact candidates and selects the shortest. It checks both Base64URL and Base85 payload encodings. Base85 is useful for already compressed or Base64-like input because it stores 4 bytes in 5 text characters instead of Base64's 3 bytes in 4 text characters.
 
 `decodeAuto()` dispatches by format:
 
-- Starts with `XC1`: compact decode.
+- Starts with `XC1` or `XC2`: compact decode.
 - Digits only: numeric decode. It tries `000/001/002` best headers first, then falls back to legacy raw numeric groups.
 
 This keeps old numeric ciphertext usable while adding compact text output.
@@ -162,7 +167,7 @@ Before decrypting:
 - Ciphertext must contain only digits after whitespace is removed.
 - Ciphertext length must be divisible by 3.
 - Each 3-digit group must be between `000` and `255`.
-- Compact ciphertext must match `XC1R.`, `XC1G.`, `XC1D.`, or `XC1B.` with a Base64URL payload.
+- Compact ciphertext must match an `XC1` Base64URL header or `XC2` Base85 header.
 
 Before encrypting:
 

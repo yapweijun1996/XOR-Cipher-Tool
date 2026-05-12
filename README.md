@@ -12,7 +12,7 @@ Build a simple static web tool that:
 - Converts the message and key into UTF-8 bytes.
 - Applies XOR byte by byte.
 - Outputs a numeric ciphertext where every encrypted byte is stored as a 3-digit number.
-- Optionally outputs compact text with a self-describing `XC1` header.
+- Optionally outputs compact text with self-describing `XC1` or `XC2` headers.
 - Decrypts the numeric ciphertext back into the original text.
 - Provides a reusable single-file JavaScript library for other engineers and AI agents.
 
@@ -46,13 +46,17 @@ Best number mode prefixes the payload with a 3-digit mode header:
 002 = gzip plaintext -> XOR compressed bytes -> gzip number ciphertext -> number ciphertext
 ```
 
-Compact text mode is optional and may contain letters, digits, `_`, `-`, and `.`:
+Compact text mode is optional. `XC1` uses Base64URL. `XC2` uses ASCII85/Base85 for shorter text output and may contain punctuation:
 
 ```text
 XC1R.<base64url> = raw XOR bytes
 XC1G.<base64url> = gzip plaintext -> XOR -> Base64URL
 XC1D.<base64url> = deflate-raw plaintext -> XOR -> Base64URL
 XC1B.<base64url> = brotli plaintext -> XOR -> Base64URL, only when supported
+XC2R.<ascii85> = raw XOR bytes -> ASCII85
+XC2G.<ascii85> = gzip plaintext -> XOR -> ASCII85
+XC2D.<ascii85> = deflate-raw plaintext -> XOR -> ASCII85
+XC2B.<ascii85> = brotli plaintext -> XOR -> ASCII85, only when supported
 ```
 
 ## Required Features
@@ -186,6 +190,8 @@ await XORNumberCipher.encryptBestNumbers(message, key)
 await XORNumberCipher.decryptBestNumbers(ciphertext, key)
 XORNumberCipher.bytesToBase64Url(bytes)
 XORNumberCipher.base64UrlToBytes(text)
+XORNumberCipher.bytesToAscii85(bytes)
+XORNumberCipher.ascii85ToBytes(text)
 XORNumberCipher.isCompressionFormatSupported(format)
 XORNumberCipher.buildXorRows(message, key, limit)
 ```
@@ -213,7 +219,7 @@ const message = await XORNumberCipher.decode(result.ciphertext, key);
 
 `encode()` keeps number-only output by default for compatibility and returns metadata such as `format`, `mode`, `modeName`, and `selectedLength`.
 
-Use `{ output: "compact" }` when letters and symbols are allowed and shorter output is preferred. `decode()` auto-detects number-only and `XC1` compact ciphertext.
+Use `{ output: "compact" }` when letters and symbols are allowed and shorter output is preferred. `decode()` auto-detects number-only, `XC1` Base64URL compact ciphertext, and `XC2` Base85 compact ciphertext.
 
 ## Regenerate Icons
 

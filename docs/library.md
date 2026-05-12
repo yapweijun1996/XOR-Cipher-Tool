@@ -45,6 +45,7 @@ await XORNumberCipher.encode(message, key, { output: "compact" })
 await XORNumberCipher.decode(ciphertext, key)
 await XORNumberCipher.encodeCompact(message, key)
 await XORNumberCipher.encodeCompact(message, key, { mode: "raw" | "gzip" | "deflate-raw" | "brotli" })
+await XORNumberCipher.encodeCompact(message, key, { encoding: "base64url" | "base85" })
 await XORNumberCipher.decodeCompact(ciphertext, key)
 await XORNumberCipher.encodeBest(message, key, { output: "number" | "compact" | "auto" })
 await XORNumberCipher.decodeAuto(ciphertext, key)
@@ -68,6 +69,8 @@ XORNumberCipher.isNumberCiphertext(ciphertext)
 XORNumberCipher.isCompactCiphertext(ciphertext)
 XORNumberCipher.bytesToBase64Url(bytes)
 XORNumberCipher.base64UrlToBytes(text)
+XORNumberCipher.bytesToAscii85(bytes)
+XORNumberCipher.ascii85ToBytes(text)
 await XORNumberCipher.compressBytes(bytes, format)
 await XORNumberCipher.decompressBytes(bytes, format)
 await XORNumberCipher.decompressToBytes(bytes, format)
@@ -86,7 +89,7 @@ const result = await XORNumberCipher.encode(message, key);
 const plaintext = await XORNumberCipher.decode(result.ciphertext, key);
 ```
 
-`encode()` keeps number-only output by default for compatibility. It returns best numeric output with a `000`, `001`, or `002` header. `decode()` auto-detects number-only ciphertext and compact `XC1` ciphertext.
+`encode()` keeps number-only output by default for compatibility. It returns best numeric output with a `000`, `001`, or `002` header. `decode()` auto-detects number-only ciphertext, `XC1` Base64URL compact ciphertext, and `XC2` Base85 compact ciphertext.
 
 Use compact output when non-number ciphertext is acceptable:
 
@@ -157,7 +160,7 @@ Legacy note: `zipNumberCiphertext()` gzips the already-encrypted number string. 
 Compact mode uses this pipeline:
 
 ```text
-compress plaintext -> XOR by key -> Base64URL encode
+compress plaintext -> XOR by key -> text encode
 ```
 
 The output is self-describing:
@@ -167,9 +170,13 @@ XC1R.<base64url> = raw XOR bytes
 XC1G.<base64url> = gzip plaintext -> XOR -> Base64URL
 XC1D.<base64url> = deflate-raw plaintext -> XOR -> Base64URL
 XC1B.<base64url> = brotli plaintext -> XOR -> Base64URL
+XC2R.<ascii85> = raw XOR bytes -> ASCII85
+XC2G.<ascii85> = gzip plaintext -> XOR -> ASCII85
+XC2D.<ascii85> = deflate-raw plaintext -> XOR -> ASCII85
+XC2B.<ascii85> = brotli plaintext -> XOR -> ASCII85
 ```
 
-`encodeCompact()` compares supported compact candidates and returns the shortest. `deflate-raw` and brotli are feature-detected; unsupported formats are skipped.
+`encodeCompact()` compares supported compact candidates and returns the shortest. It compares Base64URL and Base85 payload encodings for every supported compression mode. `deflate-raw` and brotli are feature-detected; unsupported formats are skipped.
 
 ```js
 const result = await XORNumberCipher.encodeCompact(message, key);
@@ -184,6 +191,10 @@ To test a specific compact mode:
 
 ```js
 const gzip = await XORNumberCipher.encodeCompact(message, key, { mode: "gzip" });
+const gzipBase85 = await XORNumberCipher.encodeCompact(message, key, {
+  mode: "gzip",
+  encoding: "base85"
+});
 ```
 
 Compact metadata shape:
@@ -192,8 +203,9 @@ Compact metadata shape:
 {
   ciphertext,
   format: "compact",
-  mode: "XC1G",
-  modeName: "gzip-before-xor-base64url",
+  mode: "XC2G",
+  modeName: "gzip-before-xor-base85",
+  encoding: "base85",
   selectedLength,
   candidates
 }

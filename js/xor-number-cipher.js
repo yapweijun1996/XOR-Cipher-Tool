@@ -48,7 +48,7 @@
   }
 
   function isCompactCiphertext(ciphertext) {
-    return cleanCiphertext(ciphertext).startsWith("XC1");
+    return /^XC[12]/u.test(cleanCiphertext(ciphertext));
   }
 
   function isNumberCiphertext(ciphertext) {
@@ -209,6 +209,62 @@
     }
 
     return binaryToBytes(atob(base64));
+  }
+
+  function bytesToAscii85(bytes) {
+    let output = "";
+
+    for (let i = 0; i < bytes.length; i += 4) {
+      const remaining = Math.min(4, bytes.length - i);
+      const block = new Uint8Array(4);
+      block.set(bytes.subarray(i, i + remaining));
+      let value = ((block[0] * 256 + block[1]) * 256 + block[2]) * 256 + block[3];
+      const encoded = new Array(5);
+
+      for (let j = 4; j >= 0; j -= 1) {
+        encoded[j] = String.fromCharCode((value % 85) + 33);
+        value = Math.floor(value / 85);
+      }
+
+      output += encoded.slice(0, remaining === 4 ? 5 : remaining + 1).join("");
+    }
+
+    return output;
+  }
+
+  function ascii85ToBytes(text) {
+    const clean = cleanCiphertext(text);
+
+    if (!/^[!-u]*$/u.test(clean)) {
+      throw new Error("Compact v2 ciphertext payload must be ASCII85 text.");
+    }
+
+    if (clean.length % 5 === 1) {
+      throw new Error("Invalid ASCII85 payload length.");
+    }
+
+    const bytes = [];
+
+    for (let i = 0; i < clean.length; i += 5) {
+      const chunk = clean.slice(i, i + 5);
+      const finalChunk = chunk.length < 5;
+      const padded = finalChunk ? chunk.padEnd(5, "u") : chunk;
+      let value = 0;
+
+      for (let j = 0; j < 5; j += 1) {
+        value = value * 85 + (padded.charCodeAt(j) - 33);
+      }
+
+      const block = [
+        Math.floor(value / 16777216) & 255,
+        Math.floor(value / 65536) & 255,
+        Math.floor(value / 256) & 255,
+        value & 255,
+      ];
+      bytes.push(...block.slice(0, finalChunk ? chunk.length - 1 : 4));
+    }
+
+    return new Uint8Array(bytes);
   }
 
   async function compressBytes(bytes, format) {
@@ -374,7 +430,23 @@
     throw new Error(`Unsupported compact mode: ${mode}.`);
   }
 
-  async function buildCompactCandidate(plainBytes, key, modeCode) {
+  function encodeCompactPayload(bytes, encoding) {
+    if (encoding === "base85") {
+      return bytesToAscii85(bytes);
+    }
+
+    return bytesToBase64Url(bytes);
+  }
+
+  function decodeCompactPayload(text, encoding) {
+    if (encoding === "base85") {
+      return ascii85ToBytes(text);
+    }
+
+    return base64UrlToBytes(text);
+  }
+
+  async function buildCompactCandidate(plainBytes, key, modeCode, encoding) {
     const config = COMPACT_FORMATS[modeCode];
     if (!config) {
       throw new Error(`Unsupported compact mode: ${modeCode}.`);
@@ -394,14 +466,20 @@
       ? await compressBytes(plainBytes, config.compression)
       : plainBytes;
     const encryptedBytes = xorBytes(payloadBytes, key);
-    const ciphertext = `${config.mode}.${bytesToBase64Url(encryptedBytes)}`;
+    const mode = encoding === "base85"
+      ? config.mode.replace("XC1", "XC2")
+      : config.mode;
+    const ciphertext = `${mode}.${encodeCompactPayload(encryptedBytes, encoding)}`;
 
     return {
       ciphertext,
       format: "compact",
-      mode: config.mode,
-      modeName: config.modeName,
+      mode,
+      modeName: encoding === "base85"
+        ? config.modeName.replace("base64url", "base85")
+        : config.modeName,
       compression: config.compression || "none",
+      encoding,
       selectedLength: ciphertext.length,
       length: ciphertext.length,
       supported: true,
@@ -415,12 +493,20 @@
 
     const plainBytes = encoder.encode(message);
     const requestedMode = normalizeCompactMode(options && options.mode);
+    const requestedEncoding = options && options.encoding;
     const modeCodes = requestedMode ? [requestedMode] : ["R", "G", "D", "B"];
+    const encodings = requestedEncoding ? [requestedEncoding] : ["base64url", "base85"];
     const candidates = [];
 
     for (const modeCode of modeCodes) {
-      const candidate = await buildCompactCandidate(plainBytes, key, modeCode);
-      candidates.push(candidate);
+      for (const encoding of encodings) {
+        if (!["base64url", "base85"].includes(encoding)) {
+          throw new Error(`Unsupported compact encoding: ${encoding}.`);
+        }
+
+        const candidate = await buildCompactCandidate(plainBytes, key, modeCode, encoding);
+        candidates.push(candidate);
+      }
     }
 
     const supportedCandidates = candidates.filter((candidate) => candidate.supported);
@@ -442,6 +528,7 @@
       mode: best.mode,
       modeName: best.modeName,
       compression: best.compression,
+      encoding: best.encoding,
       selectedLength: best.length,
       candidates,
     };
@@ -453,14 +540,15 @@
     const clean = cleanCiphertext(ciphertext);
     requireValue(clean, "Ciphertext");
 
-    const match = clean.match(/^(XC1[RGDB])\.([A-Za-z0-9_-]*)$/u);
+    const match = clean.match(/^(XC[12][RGDB])\.([!-uA-Za-z0-9_-]*)$/u);
     if (!match) {
-      throw new Error("Compact ciphertext must use XC1R, XC1G, XC1D, or XC1B format.");
+      throw new Error("Compact ciphertext must use XC1 or XC2 format.");
     }
 
     const modeCode = match[1].slice(-1);
+    const encoding = match[1].startsWith("XC2") ? "base85" : "base64url";
     const config = COMPACT_FORMATS[modeCode];
-    const encryptedBytes = base64UrlToBytes(match[2]);
+    const encryptedBytes = decodeCompactPayload(match[2], encoding);
     const payloadBytes = xorBytes(encryptedBytes, key);
 
     if (!config.compression) {
@@ -593,6 +681,8 @@
     isCompactCiphertext,
     bytesToBase64Url,
     base64UrlToBytes,
+    bytesToAscii85,
+    ascii85ToBytes,
     compressBytes,
     decompressBytes,
     decompressToBytes,

@@ -39,6 +39,7 @@ No active implementation task.
 - Added best mode with 000/001/002 headers for normal, gzip-before-encrypt, and gzip+encrypt+gzip.
 - Added high-level encode/decode aliases for engineer and AI agent usage.
 - Added optional compact text output mode with XC1R/XC1G/XC1D/XC1B headers and auto-detect decode.
+- Added XC2 Base85 compact payloads for shorter non-number output on high-entropy text.
 
 ## Blocked
 
