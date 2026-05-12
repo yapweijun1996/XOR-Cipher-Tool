@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="XOR Cipher Tool">
+  <rect width="128" height="128" rx="24" fill="#0f766e"/>
+  <rect x="18" y="22" width="92" height="84" rx="14" fill="#ecfdf5"/>
+  <path d="M38 44l18 20-18 20M90 44L72 64l18 20" fill="none" stroke="#0f766e" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M59 84l10-40" fill="none" stroke="#134e4a" stroke-width="8" stroke-linecap="round"/>
+</svg>

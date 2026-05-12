@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f766e">
+  <meta name="description" content="A browser-based XOR number cipher demo for learning how repeated-key XOR works.">
+  <meta name="author" content="Yap Wei Jun">
+  <title>XOR Cipher Tool</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./img/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./img/apple-touch-icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="XOR Cipher">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Number-based XOR demo</p>
+        <h1>XOR Cipher Tool</h1>
+      </div>
+      <button class="icon-button" id="installButton" type="button" hidden title="Install app" aria-label="Install app">
+        <span aria-hidden="true">+</span>
+      </button>
+    </header>
+
+    <section class="notice" aria-label="Security notice">
+      Repeated-key XOR is for learning only. Do not use this tool for passwords, tokens, private files, or production security.
+    </section>
+
+    <section class="tool-grid" aria-label="XOR cipher form">
+      <div class="field full">
+        <label for="keyInput">Key</label>
+        <input id="keyInput" type="text" autocomplete="off" placeholder="Enter a key">
+      </div>
+
+      <div class="field">
+        <label for="plainText">Plain text</label>
+        <textarea id="plainText" placeholder="Enter message, Chinese, emoji, or any Unicode text"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="cipherText">Number ciphertext</label>
+        <textarea id="cipherText" inputmode="numeric" placeholder="Encrypted number output"></textarea>
+      </div>
+
+      <div class="actions full" aria-label="Cipher actions">
+        <button id="encryptButton" type="button">Encrypt to Numbers</button>
+        <button id="decryptButton" type="button" class="secondary">Decrypt from Numbers</button>
+        <button id="copyCipherButton" type="button" class="secondary">Copy Cipher</button>
+        <button id="copyPlainButton" type="button" class="secondary">Copy Plain Text</button>
+        <button id="clearButton" type="button" class="ghost">Clear</button>
+      </div>
+
+      <div class="options full">
+        <label class="checkbox-label">
+          <input id="groupOutput" type="checkbox">
+          Group ciphertext every 3 digits
+        </label>
+        <label class="checkbox-label">
+          <input id="showTable" type="checkbox" checked>
+          Show XOR byte table
+        </label>
+      </div>
+
+      <p class="status full" id="statusMessage" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="table-section" id="tableSection" aria-label="XOR byte explanation">
+      <div class="section-heading">
+        <h2>XOR byte table</h2>
+        <p>Shows the first 24 encrypted bytes.</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Message byte</th>
+              <th>Key byte</th>
+              <th>XOR</th>
+              <th>3-digit</th>
+            </tr>
+          </thead>
+          <tbody id="xorTableBody">
+            <tr>
+              <td colspan="5">Encrypt a message to see byte-level output.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="update-banner" id="updateBanner" hidden>
+      <span>New version available.</span>
+      <button id="reloadButton" type="button">Reload</button>
+    </div>
+  </main>
+
+  <script src="./js/app.js" defer></script>
+</body>
+</html>
