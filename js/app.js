@@ -17,7 +17,13 @@
     copyPlainButton: document.getElementById("copyPlainButton"),
     clearButton: document.getElementById("clearButton"),
     groupOutput: document.getElementById("groupOutput"),
-    zipOutput: document.getElementById("zipOutput"),
+    outputMode: document.getElementById("outputMode"),
+    numberMode: document.getElementById("numberMode"),
+    numberModeField: document.getElementById("numberModeField"),
+    compactMode: document.getElementById("compactMode"),
+    compactModeField: document.getElementById("compactModeField"),
+    compactEncoding: document.getElementById("compactEncoding"),
+    compactEncodingField: document.getElementById("compactEncodingField"),
     showTable: document.getElementById("showTable"),
     tableSection: document.getElementById("tableSection"),
     xorTableBody: document.getElementById("xorTableBody"),
@@ -36,11 +42,15 @@
     return Array.from(value).length;
   }
 
+  function isCompactOutputSelected() {
+    return els.outputMode.value === "compact";
+  }
+
   function updateCounters() {
     const plain = els.plainText.value;
     const cipherValue = els.cipherText.value;
     const cleanCipher = cipher.cleanCiphertext(cipherValue);
-    const compactMode = els.zipOutput.checked || cipher.isCompactCiphertext(cleanCipher);
+    const compactMode = isCompactOutputSelected() || cipher.isCompactCiphertext(cleanCipher);
     const groupCount = !compactMode && cleanCipher.length > 0 && cleanCipher.length % 3 === 0
       ? cleanCipher.length / 3
       : 0;
@@ -52,13 +62,23 @@
   }
 
   function updateModeLabels() {
-    if (els.zipOutput.checked) {
+    if (isCompactOutputSelected()) {
       els.encryptButton.textContent = "Encrypt Compact";
       els.decryptButton.textContent = "Decrypt Compact";
     } else {
       els.encryptButton.textContent = "Encrypt to Numbers";
       els.decryptButton.textContent = "Decrypt from Numbers";
     }
+  }
+
+  function updateAdvancedControls() {
+    const compact = isCompactOutputSelected();
+    els.numberModeField.hidden = compact;
+    els.compactModeField.hidden = !compact;
+    els.compactEncodingField.hidden = !compact;
+    els.numberMode.disabled = compact;
+    els.compactMode.disabled = !compact;
+    els.compactEncoding.disabled = !compact;
   }
 
   function setStatus(message, type) {
@@ -130,12 +150,17 @@
       const key = els.keyInput.value;
       let result = null;
 
-      if (els.zipOutput.checked) {
-        result = await cipher.encode(message, key, { output: "compact" });
+      if (isCompactOutputSelected()) {
+        result = await cipher.encodeCompact(message, key, {
+          mode: els.compactMode.value,
+          encoding: els.compactEncoding.value,
+        });
         lastCipherFormat = "compact";
         lastContinuousCipher = result.ciphertext;
       } else {
-        result = await cipher.encode(message, key, { output: "number" });
+        result = await cipher.encodeNumber(message, key, {
+          mode: els.numberMode.value,
+        });
         lastCipherFormat = "number";
         lastContinuousCipher = result.ciphertext;
       }
@@ -202,12 +227,16 @@
       updateCounters();
     });
     els.groupOutput.addEventListener("change", refreshCipherDisplay);
-    els.zipOutput.addEventListener("change", () => {
+    els.outputMode.addEventListener("change", () => {
       updateModeLabels();
+      updateAdvancedControls();
       updateCounters();
-      setStatus(els.zipOutput.checked
-        ? "Compact text output enabled. Output uses an XC1 mode header."
-        : "Number-only output enabled. Output uses 000/001/002 numeric mode headers.", "");
+      setStatus(isCompactOutputSelected()
+        ? "Compact text output enabled. Choose compression and encoding manually."
+        : "Number-only output enabled. Choose numeric compression manually.", "");
+    });
+    [els.numberMode, els.compactMode, els.compactEncoding].forEach((select) => {
+      select.addEventListener("change", updateCounters);
     });
     els.showTable.addEventListener("change", () => {
       els.tableSection.hidden = !els.showTable.checked;
@@ -273,6 +302,7 @@
 
   registerEvents();
   updateModeLabels();
+  updateAdvancedControls();
   updateCounters();
   setupInstallPrompt();
   setupServiceWorker();

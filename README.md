@@ -72,7 +72,7 @@ XC2B.<ascii85> = brotli plaintext -> XOR -> ASCII85, only when supported
 - Clear/reset all fields.
 - Show before/after textarea counts: plaintext characters/bytes and ciphertext digits/groups.
 - Allow end users to gzip plaintext before encryption when it makes the numeric output shorter.
-- Allow end users to switch to compact text output when non-number ciphertext is acceptable.
+- Allow end users to choose output format, compression mode, and compact text encoding manually.
 - Show a warning that XOR cipher is for learning only.
 
 ## Recommended Features
@@ -168,6 +168,7 @@ Available API:
 await XORNumberCipher.encode(message, key)
 await XORNumberCipher.encode(message, key, { output: "compact" })
 await XORNumberCipher.decode(ciphertext, key)
+await XORNumberCipher.encodeNumber(message, key, { mode: "normal" | "gzip" | "gzip-number" })
 await XORNumberCipher.encodeCompact(message, key)
 await XORNumberCipher.decodeCompact(ciphertext, key)
 await XORNumberCipher.encodeBest(message, key, { output: "number" | "compact" | "auto" })
@@ -219,7 +220,7 @@ const message = await XORNumberCipher.decode(result.ciphertext, key);
 
 `encode()` keeps number-only output by default for compatibility and returns metadata such as `format`, `mode`, `modeName`, and `selectedLength`.
 
-Use `{ output: "compact" }` when letters and symbols are allowed and shorter output is preferred. `decode()` auto-detects number-only, `XC1` Base64URL compact ciphertext, and `XC2` Base85 compact ciphertext.
+Use `encodeNumber()` or `encodeCompact()` when the caller needs explicit control instead of automatic best selection. `decode()` auto-detects number-only, `XC1` Base64URL compact ciphertext, and `XC2` Base85 compact ciphertext.
 
 ## Regenerate Icons
 

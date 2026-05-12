@@ -418,6 +418,55 @@
     throw new Error(`Unsupported best ciphertext mode: ${mode}.`);
   }
 
+  async function encodeNumber(message, key, options) {
+    requireValue(message, "Message");
+    requireValue(key, "Key");
+
+    const mode = options && options.mode ? String(options.mode).toLowerCase() : "normal";
+    const normal = encryptToNumbers(message, key);
+
+    if (mode === "normal" || mode === "none" || mode === "raw" || mode === "000") {
+      const ciphertext = `000${normal}`;
+      return {
+        ciphertext,
+        format: "number",
+        mode: "000",
+        modeName: "normal",
+        selectedLength: ciphertext.length,
+        savedDigits: 0,
+      };
+    }
+
+    const compressed = await encryptCompressedToNumbers(message, key);
+
+    if (mode === "gzip" || mode === "compressed" || mode === "001") {
+      const ciphertext = `001${compressed}`;
+      return {
+        ciphertext,
+        format: "number",
+        mode: "001",
+        modeName: "gzip-before-encrypt",
+        selectedLength: ciphertext.length,
+        savedDigits: Math.max(0, normal.length + 3 - ciphertext.length),
+      };
+    }
+
+    if (mode === "gzip-number" || mode === "double" || mode === "002") {
+      const doubleCompressed = await zipNumberCiphertext(compressed);
+      const ciphertext = `002${doubleCompressed}`;
+      return {
+        ciphertext,
+        format: "number",
+        mode: "002",
+        modeName: "gzip-before-encrypt-plus-gzip",
+        selectedLength: ciphertext.length,
+        savedDigits: Math.max(0, normal.length + 3 - ciphertext.length),
+      };
+    }
+
+    throw new Error(`Unsupported number compression mode: ${mode}.`);
+  }
+
   function normalizeCompactMode(mode) {
     if (!mode || mode === "best") return null;
 
@@ -634,7 +683,7 @@
     const output = options && options.output ? options.output : "number";
 
     if (output === "number") {
-      return await encodeBest(message, key, { output: "number" });
+      return await encodeNumber(message, key, options);
     }
 
     return await encodeBest(message, key, options);
@@ -696,6 +745,7 @@
     encryptToShortestNumbers,
     encryptBestNumbers,
     decryptBestNumbers,
+    encodeNumber,
     encodeCompact,
     decodeCompact,
     encodeBest,

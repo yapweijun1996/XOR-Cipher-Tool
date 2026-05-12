@@ -18,6 +18,7 @@ This file exposes a global browser API:
 await XORNumberCipher.encode(message, key)
 await XORNumberCipher.encode(message, key, { output: "compact" })
 await XORNumberCipher.decode(ciphertext, key)
+await XORNumberCipher.encodeNumber(message, key, { mode: "normal" | "gzip" | "gzip-number" })
 await XORNumberCipher.encodeCompact(message, key)
 await XORNumberCipher.decodeCompact(ciphertext, key)
 await XORNumberCipher.encodeBest(message, key, { output: "number" | "compact" | "auto" })
@@ -119,6 +120,14 @@ For automatic self-describing output, use best mode:
 
 The first 3 digits are a mode header. `decryptBestNumbers()` reads the header and applies the correct reverse flow.
 
+For manual selection, `encodeNumber()` writes the same self-describing headers without comparing candidates:
+
+```text
+normal = 000
+gzip = 001
+gzip-number = 002
+```
+
 ## Compact Text Flow
 
 Compact text mode is optional. It is intended for engineers, AI agents, and users who can accept non-number ciphertext for shorter output.
@@ -149,7 +158,7 @@ XC1G.A1b2_cd-...
 XC2G.87cURD]i,...
 ```
 
-`encodeCompact()` compares supported compact candidates and selects the shortest. It checks both Base64URL and Base85 payload encodings. Base85 is useful for already compressed or Base64-like input because it stores 4 bytes in 5 text characters instead of Base64's 3 bytes in 4 text characters.
+`encodeCompact()` can be automatic or manual. If `mode` and `encoding` are both provided, it uses that exact compact format. If either is omitted, it compares the remaining supported candidates and selects the shortest. Base85 is useful for already compressed or Base64-like input because it stores 4 bytes in 5 text characters instead of Base64's 3 bytes in 4 text characters.
 
 `decodeAuto()` dispatches by format:
 

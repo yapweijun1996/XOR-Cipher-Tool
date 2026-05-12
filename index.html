@@ -68,13 +68,43 @@
           Group ciphertext every 3 digits
         </label>
         <label class="checkbox-label">
-          <input id="zipOutput" type="checkbox">
-          Compact text output
-        </label>
-        <label class="checkbox-label">
           <input id="showTable" type="checkbox" checked>
           Show XOR byte table
         </label>
+      </div>
+
+      <div class="advanced-options full" aria-label="Advanced output settings">
+        <div class="select-field">
+          <label for="outputMode">Output</label>
+          <select id="outputMode">
+            <option value="number">Number only</option>
+            <option value="compact">Compact text</option>
+          </select>
+        </div>
+        <div class="select-field" id="numberModeField">
+          <label for="numberMode">Number compression</label>
+          <select id="numberMode">
+            <option value="normal">None: XOR numbers</option>
+            <option value="gzip">Gzip plaintext before XOR</option>
+            <option value="gzip-number">Gzip plaintext and number output</option>
+          </select>
+        </div>
+        <div class="select-field" id="compactModeField">
+          <label for="compactMode">Compact compression</label>
+          <select id="compactMode">
+            <option value="raw">None: raw XOR bytes</option>
+            <option value="gzip">Gzip plaintext</option>
+            <option value="deflate-raw">Deflate raw plaintext</option>
+            <option value="brotli">Brotli plaintext</option>
+          </select>
+        </div>
+        <div class="select-field" id="compactEncodingField">
+          <label for="compactEncoding">Compact encoding</label>
+          <select id="compactEncoding">
+            <option value="base64url">Base64URL safe text</option>
+            <option value="base85">Base85 shortest text</option>
+          </select>
+        </div>
       </div>
 
       <p class="status full" id="statusMessage" role="status" aria-live="polite"></p>

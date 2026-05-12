@@ -35,12 +35,14 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
 
 button:focus-visible,
 input:focus-visible,
+select:focus-visible,
 textarea:focus-visible {
   outline: 3px solid rgba(15, 118, 110, 0.32);
   outline-offset: 2px;
@@ -138,6 +140,7 @@ label,
 }
 
 input,
+select,
 textarea {
   width: 100%;
   border: 1px solid var(--line);
@@ -151,6 +154,11 @@ input {
   padding: 10px 12px;
 }
 
+select {
+  min-height: 46px;
+  padding: 10px 12px;
+}
+
 textarea {
   min-height: 180px;
   resize: vertical;
@@ -159,10 +167,22 @@ textarea {
 }
 
 .actions,
-.options {
+.options,
+.advanced-options {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.advanced-options {
+  align-items: end;
+}
+
+.select-field {
+  display: grid;
+  gap: 6px;
+  min-width: min(100%, 220px);
+  flex: 1 1 220px;
 }
 
 button {
