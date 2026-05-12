@@ -72,6 +72,8 @@ const zipped = await XORNumberCipher.encryptToZippedNumbers("Long message...", "
 const plaintext = await XORNumberCipher.decryptFromZippedNumbers(zipped, "secret-key");
 ```
 
+The web UI exposes this through the `Zip encrypted output` checkbox. When checked, Encrypt writes zipped numeric ciphertext and Decrypt expects zipped numeric ciphertext.
+
 Important:
 
 - The zipped output is still number-only.

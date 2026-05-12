@@ -60,7 +60,7 @@ Icon rules:
 Use a versioned cache:
 
 ```js
-const VERSION = "2026-05-12-3";
+const VERSION = "2026-05-12-4";
 const CACHE_NAME = `xor-cipher-${VERSION}`;
 ```
 

@@ -17,6 +17,7 @@
     copyPlainButton: document.getElementById("copyPlainButton"),
     clearButton: document.getElementById("clearButton"),
     groupOutput: document.getElementById("groupOutput"),
+    zipOutput: document.getElementById("zipOutput"),
     showTable: document.getElementById("showTable"),
     tableSection: document.getElementById("tableSection"),
     xorTableBody: document.getElementById("xorTableBody"),
@@ -27,6 +28,7 @@
   };
 
   let lastContinuousCipher = "";
+  let lastCipherIsZipped = false;
   let deferredInstallPrompt = null;
   let waitingWorker = null;
 
@@ -44,6 +46,16 @@
 
     els.plainCounter.textContent = `${countCodePoints(plain)} chars / ${encoder.encode(plain).length} bytes`;
     els.cipherCounter.textContent = `${cleanCipher.length} digits / ${groupCount} groups`;
+  }
+
+  function updateModeLabels() {
+    if (els.zipOutput.checked) {
+      els.encryptButton.textContent = "Encrypt to Zipped Numbers";
+      els.decryptButton.textContent = "Decrypt from Zipped Numbers";
+    } else {
+      els.encryptButton.textContent = "Encrypt to Numbers";
+      els.decryptButton.textContent = "Decrypt from Numbers";
+    }
   }
 
   function setStatus(message, type) {
@@ -109,30 +121,40 @@
     els.updateBanner.hidden = false;
   }
 
-  function onEncrypt() {
+  async function onEncrypt() {
     try {
       const message = els.plainText.value;
       const key = els.keyInput.value;
-      lastContinuousCipher = cipher.encrypt(message, key);
+      lastCipherIsZipped = els.zipOutput.checked;
+      lastContinuousCipher = lastCipherIsZipped
+        ? await cipher.encryptToZippedNumbers(message, key)
+        : cipher.encrypt(message, key);
       refreshCipherDisplay();
       renderTable(cipher.buildXorRows(message, key, MAX_TABLE_ROWS));
       updateCounters();
-      setStatus("Encrypted into 3-digit number groups.", "success");
+      setStatus(lastCipherIsZipped
+        ? "Encrypted and zipped into 3-digit number groups."
+        : "Encrypted into 3-digit number groups.", "success");
     } catch (error) {
       handleError(error);
     }
   }
 
-  function onDecrypt() {
+  async function onDecrypt() {
     try {
       const key = els.keyInput.value;
-      const decrypted = cipher.decrypt(els.cipherText.value, key);
+      const decrypted = els.zipOutput.checked
+        ? await cipher.decryptFromZippedNumbers(els.cipherText.value, key)
+        : cipher.decrypt(els.cipherText.value, key);
       els.plainText.value = decrypted;
       lastContinuousCipher = cipher.validateNumberCiphertext(els.cipherText.value);
+      lastCipherIsZipped = els.zipOutput.checked;
       refreshCipherDisplay();
       renderTable(cipher.buildXorRows(decrypted, key, MAX_TABLE_ROWS));
       updateCounters();
-      setStatus("Decrypted successfully.", "success");
+      setStatus(lastCipherIsZipped
+        ? "Unzipped and decrypted successfully."
+        : "Decrypted successfully.", "success");
     } catch (error) {
       handleError(error);
     }
@@ -143,14 +165,19 @@
     els.plainText.value = "";
     els.cipherText.value = "";
     lastContinuousCipher = "";
+    lastCipherIsZipped = false;
     renderTable([]);
     updateCounters();
     setStatus("Cleared.", "success");
   }
 
   function registerEvents() {
-    els.encryptButton.addEventListener("click", onEncrypt);
-    els.decryptButton.addEventListener("click", onDecrypt);
+    els.encryptButton.addEventListener("click", () => {
+      onEncrypt().catch(handleError);
+    });
+    els.decryptButton.addEventListener("click", () => {
+      onDecrypt().catch(handleError);
+    });
     els.copyCipherButton.addEventListener("click", () => {
       copyValue(els.cipherText.value, "Ciphertext").catch(handleError);
     });
@@ -164,6 +191,12 @@
       updateCounters();
     });
     els.groupOutput.addEventListener("change", refreshCipherDisplay);
+    els.zipOutput.addEventListener("change", () => {
+      updateModeLabels();
+      setStatus(els.zipOutput.checked
+        ? "Zip mode enabled. Ciphertext must be zipped numbers when decrypting."
+        : "Zip mode disabled. Ciphertext must be normal numbers when decrypting.", "");
+    });
     els.showTable.addEventListener("change", () => {
       els.tableSection.hidden = !els.showTable.checked;
     });
@@ -227,6 +260,7 @@
   }
 
   registerEvents();
+  updateModeLabels();
   updateCounters();
   setupInstallPrompt();
   setupServiceWorker();

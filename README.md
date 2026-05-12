@@ -49,6 +49,7 @@ The decryptor reads the ciphertext in 3-digit groups:
 - Copy encrypted and decrypted output.
 - Clear/reset all fields.
 - Show before/after textarea counts: plaintext characters/bytes and ciphertext digits/groups.
+- Allow end users to enable zipped numeric ciphertext output from the UI.
 - Show a warning that XOR cipher is for learning only.
 
 ## Recommended Features

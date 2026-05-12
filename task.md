@@ -34,6 +34,7 @@ No active implementation task.
 - Added live plaintext and ciphertext length counters for end users.
 - Added optional gzip-to-number APIs for long numeric ciphertext.
 - Fixed PWA update flow so waiting Service Workers show reload and update checks bypass cached `sw.js`.
+- Added a UI checkbox for zipped numeric ciphertext mode.
 
 ## Blocked
 
