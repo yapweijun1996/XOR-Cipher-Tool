@@ -49,6 +49,8 @@ await XORNumberCipher.zipNumberCiphertext(ciphertext)
 await XORNumberCipher.unzipNumberCiphertext(zippedCiphertext)
 await XORNumberCipher.encryptToZippedNumbers(message, key)
 await XORNumberCipher.decryptFromZippedNumbers(zippedCiphertext, key)
+await XORNumberCipher.encryptCompressedToNumbers(message, key)
+await XORNumberCipher.decryptCompressedFromNumbers(ciphertext, key)
 await XORNumberCipher.encryptToShortestNumbers(message, key)
 XORNumberCipher.buildXorRows(message, key, limit)
 ```
@@ -73,9 +75,9 @@ const zipped = await XORNumberCipher.encryptToZippedNumbers("Long message...", "
 const plaintext = await XORNumberCipher.decryptFromZippedNumbers(zipped, "secret-key");
 ```
 
-The web UI exposes this through the `Zip encrypted output` checkbox. When checked, Encrypt writes zipped numeric ciphertext and Decrypt expects zipped numeric ciphertext.
+The web UI exposes a more efficient `Gzip before encrypt` mode. It gzips plaintext bytes first, XOR-encrypts those compressed bytes, then outputs the encrypted bytes as 3-digit numbers.
 
-The UI uses `encryptToShortestNumbers()`, so zip mode only outputs zipped ciphertext if it is shorter than normal ciphertext. If gzip would make the result longer, the UI keeps the normal ciphertext and shows a skip message.
+The UI uses `encryptToShortestNumbers()`, so gzip mode only outputs compressed ciphertext if it is shorter than normal ciphertext. If gzip would make the result longer, the UI keeps the normal ciphertext and shows a skip message.
 
 Important:
 
@@ -84,6 +86,8 @@ Important:
 - Small messages may become longer after gzip because gzip has header/metadata overhead.
 - Use `encryptToShortestNumbers()` when you want automatic shorter-output selection.
 - This uses `CompressionStream` and `DecompressionStream`, so it needs a modern browser or Node runtime that supports those APIs.
+
+Legacy note: `zipNumberCiphertext()` gzips the already-encrypted number string. It remains available for agents that need it, but it is less efficient than `encryptCompressedToNumbers()` for most text.
 
 ## Error Behavior
 

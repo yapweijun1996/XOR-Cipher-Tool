@@ -50,8 +50,8 @@
 
   function updateModeLabels() {
     if (els.zipOutput.checked) {
-      els.encryptButton.textContent = "Encrypt to Zipped Numbers";
-      els.decryptButton.textContent = "Decrypt from Zipped Numbers";
+      els.encryptButton.textContent = "Gzip + Encrypt";
+      els.decryptButton.textContent = "Decrypt + Gunzip";
     } else {
       els.encryptButton.textContent = "Encrypt to Numbers";
       els.decryptButton.textContent = "Decrypt from Numbers";
@@ -155,7 +155,7 @@
     try {
       const key = els.keyInput.value;
       const decrypted = els.zipOutput.checked
-        ? await cipher.decryptFromZippedNumbers(els.cipherText.value, key)
+        ? await cipher.decryptCompressedFromNumbers(els.cipherText.value, key)
         : cipher.decrypt(els.cipherText.value, key);
       els.plainText.value = decrypted;
       lastContinuousCipher = cipher.validateNumberCiphertext(els.cipherText.value);
@@ -205,7 +205,7 @@
     els.zipOutput.addEventListener("change", () => {
       updateModeLabels();
       setStatus(els.zipOutput.checked
-        ? "Zip mode enabled. Ciphertext must be zipped numbers when decrypting."
+        ? "Gzip mode enabled. Ciphertext must be gzip-before-encrypt numbers when decrypting."
         : "Zip mode disabled. Ciphertext must be normal numbers when decrypting.", "");
     });
     els.showTable.addEventListener("change", () => {

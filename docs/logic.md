@@ -26,6 +26,8 @@ await XORNumberCipher.zipNumberCiphertext(ciphertext)
 await XORNumberCipher.unzipNumberCiphertext(zippedCiphertext)
 await XORNumberCipher.encryptToZippedNumbers(message, key)
 await XORNumberCipher.decryptFromZippedNumbers(zippedCiphertext, key)
+await XORNumberCipher.encryptCompressedToNumbers(message, key)
+await XORNumberCipher.decryptCompressedFromNumbers(ciphertext, key)
 await XORNumberCipher.encryptToShortestNumbers(message, key)
 XORNumberCipher.buildXorRows(message, key, limit)
 ```
@@ -94,7 +96,7 @@ Unzip reverses that:
 
 This keeps the final zipped payload numeric-only, but it is a different format from normal ciphertext. The caller must know whether the input is zipped or normal.
 
-For UI use, prefer `encryptToShortestNumbers()`. It compares normal vs zipped output and only returns zipped output when it is actually shorter.
+For UI use, prefer `encryptToShortestNumbers()`. It compares normal output against gzip-before-encrypt output and only returns compressed output when it is actually shorter.
 
 ## Validation Rules
 

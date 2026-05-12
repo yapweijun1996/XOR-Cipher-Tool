@@ -56,11 +56,17 @@
     requireValue(key, "Key");
 
     const messageBytes = encoder.encode(message);
+    return encryptBytesToNumbers(messageBytes, key);
+  }
+
+  function encryptBytesToNumbers(bytes, key) {
+    requireValue(key, "Key");
+
     const keyBytes = encoder.encode(key);
     let output = "";
 
-    for (let i = 0; i < messageBytes.length; i += 1) {
-      const encryptedByte = messageBytes[i] ^ keyBytes[i % keyBytes.length];
+    for (let i = 0; i < bytes.length; i += 1) {
+      const encryptedByte = bytes[i] ^ keyBytes[i % keyBytes.length];
       output += String(encryptedByte).padStart(3, "0");
     }
 
@@ -68,6 +74,16 @@
   }
 
   function decryptFromNumbers(ciphertext, key) {
+    requireValue(key, "Key");
+
+    const clean = validateNumberCiphertext(ciphertext);
+    const keyBytes = encoder.encode(key);
+    const outputBytes = decryptNumbersToBytes(ciphertext, key);
+
+    return decoder.decode(outputBytes);
+  }
+
+  function decryptNumbersToBytes(ciphertext, key) {
     requireValue(key, "Key");
 
     const clean = validateNumberCiphertext(ciphertext);
@@ -80,7 +96,7 @@
       outputBytes.push(encryptedByte ^ keyByte);
     }
 
-    return decoder.decode(new Uint8Array(outputBytes));
+    return new Uint8Array(outputBytes);
   }
 
   function bytesToNumberGroups(bytes) {
@@ -118,6 +134,12 @@
     return await new Response(stream).text();
   }
 
+  async function decompressToBytes(bytes) {
+    const Decompression = requireCompressionStream("DecompressionStream");
+    const stream = new Blob([bytes]).stream().pipeThrough(new Decompression("gzip"));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+
   async function zipNumberCiphertext(ciphertext) {
     const clean = validateNumberCiphertext(ciphertext);
     const compressed = await compressBytes(encoder.encode(clean));
@@ -138,25 +160,43 @@
     return decryptFromNumbers(await unzipNumberCiphertext(zippedCiphertext), key);
   }
 
+  async function encryptCompressedToNumbers(message, key) {
+    requireValue(message, "Message");
+    requireValue(key, "Key");
+
+    const compressed = await compressBytes(encoder.encode(message));
+    return encryptBytesToNumbers(compressed, key);
+  }
+
+  async function decryptCompressedFromNumbers(ciphertext, key) {
+    const compressed = decryptNumbersToBytes(ciphertext, key);
+    const plainBytes = await decompressToBytes(compressed);
+    return decoder.decode(plainBytes);
+  }
+
   async function encryptToShortestNumbers(message, key) {
     const normal = encryptToNumbers(message, key);
-    const zipped = await zipNumberCiphertext(normal);
+    const compressed = await encryptCompressedToNumbers(message, key);
 
-    if (zipped.length < normal.length) {
+    if (compressed.length < normal.length) {
       return {
-        ciphertext: zipped,
+        ciphertext: compressed,
+        compressed: true,
         zipped: true,
         normalLength: normal.length,
-        zippedLength: zipped.length,
-        savedDigits: normal.length - zipped.length,
+        compressedLength: compressed.length,
+        zippedLength: compressed.length,
+        savedDigits: normal.length - compressed.length,
       };
     }
 
     return {
       ciphertext: normal,
+      compressed: false,
       zipped: false,
       normalLength: normal.length,
-      zippedLength: zipped.length,
+      compressedLength: compressed.length,
+      zippedLength: compressed.length,
       savedDigits: 0,
     };
   }
@@ -190,6 +230,8 @@
     decrypt: decryptFromNumbers,
     encryptToNumbers,
     decryptFromNumbers,
+    encryptBytesToNumbers,
+    decryptNumbersToBytes,
     validateNumberCiphertext,
     formatNumberGroups,
     cleanCiphertext,
@@ -197,6 +239,8 @@
     unzipNumberCiphertext,
     encryptToZippedNumbers,
     decryptFromZippedNumbers,
+    encryptCompressedToNumbers,
+    decryptCompressedFromNumbers,
     encryptToShortestNumbers,
     buildXorRows,
   };
