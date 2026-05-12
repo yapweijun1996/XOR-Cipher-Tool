@@ -32,6 +32,7 @@ No active implementation task.
 - Extracted XOR number cipher logic into a reusable single-file JavaScript library.
 - Added library documentation for browser and Node/CommonJS usage.
 - Added live plaintext and ciphertext length counters for end users.
+- Added optional gzip-to-number APIs for long numeric ciphertext.
 
 ## Blocked
 

@@ -1,7 +1,7 @@
 (function (root, factory) {
   "use strict";
 
-  const api = factory();
+  const api = factory(root);
 
   if (typeof module === "object" && module.exports) {
     module.exports = api;
@@ -9,7 +9,7 @@
 
   root.XORNumberCipher = api;
   root.XORCipherTool = api;
-}(typeof globalThis !== "undefined" ? globalThis : window, function () {
+}(typeof globalThis !== "undefined" ? globalThis : window, function (root) {
   "use strict";
 
   const encoder = new TextEncoder();
@@ -83,6 +83,61 @@
     return decoder.decode(new Uint8Array(outputBytes));
   }
 
+  function bytesToNumberGroups(bytes) {
+    return Array.from(bytes, (byte) => String(byte).padStart(3, "0")).join("");
+  }
+
+  function numberGroupsToBytes(numberGroups) {
+    const clean = validateNumberCiphertext(numberGroups);
+    const bytes = [];
+
+    for (let i = 0; i < clean.length; i += 3) {
+      bytes.push(Number(clean.slice(i, i + 3)));
+    }
+
+    return new Uint8Array(bytes);
+  }
+
+  function requireCompressionStream(type) {
+    const ctor = root[type];
+    if (typeof ctor !== "function") {
+      throw new Error(`${type} is not available in this runtime.`);
+    }
+    return ctor;
+  }
+
+  async function compressBytes(bytes) {
+    const Compression = requireCompressionStream("CompressionStream");
+    const stream = new Blob([bytes]).stream().pipeThrough(new Compression("gzip"));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+
+  async function decompressBytes(bytes) {
+    const Decompression = requireCompressionStream("DecompressionStream");
+    const stream = new Blob([bytes]).stream().pipeThrough(new Decompression("gzip"));
+    return await new Response(stream).text();
+  }
+
+  async function zipNumberCiphertext(ciphertext) {
+    const clean = validateNumberCiphertext(ciphertext);
+    const compressed = await compressBytes(encoder.encode(clean));
+    return bytesToNumberGroups(compressed);
+  }
+
+  async function unzipNumberCiphertext(zippedCiphertext) {
+    const compressedBytes = numberGroupsToBytes(zippedCiphertext);
+    const restored = await decompressBytes(compressedBytes);
+    return validateNumberCiphertext(restored);
+  }
+
+  async function encryptToZippedNumbers(message, key) {
+    return await zipNumberCiphertext(encryptToNumbers(message, key));
+  }
+
+  async function decryptFromZippedNumbers(zippedCiphertext, key) {
+    return decryptFromNumbers(await unzipNumberCiphertext(zippedCiphertext), key);
+  }
+
   function buildXorRows(message, key, limit) {
     requireValue(key, "Key");
 
@@ -115,6 +170,10 @@
     validateNumberCiphertext,
     formatNumberGroups,
     cleanCiphertext,
+    zipNumberCiphertext,
+    unzipNumberCiphertext,
+    encryptToZippedNumbers,
+    decryptFromZippedNumbers,
     buildXorRows,
   };
 }));

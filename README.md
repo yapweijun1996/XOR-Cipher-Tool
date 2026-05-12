@@ -146,6 +146,10 @@ XORNumberCipher.decryptFromNumbers(ciphertext, key)
 XORNumberCipher.validateNumberCiphertext(ciphertext)
 XORNumberCipher.formatNumberGroups(ciphertext)
 XORNumberCipher.cleanCiphertext(ciphertext)
+await XORNumberCipher.zipNumberCiphertext(ciphertext)
+await XORNumberCipher.unzipNumberCiphertext(zippedCiphertext)
+await XORNumberCipher.encryptToZippedNumbers(message, key)
+await XORNumberCipher.decryptFromZippedNumbers(zippedCiphertext, key)
 XORNumberCipher.buildXorRows(message, key, limit)
 ```
 
@@ -161,6 +165,8 @@ const plaintext = XORNumberCipher.decrypt(ciphertext, "secret-key");
 ```
 
 More details: [docs/library.md](docs/library.md).
+
+For very long numeric ciphertext, the optional zip APIs gzip the number string and output the compressed bytes as 3-digit numbers. Small messages may become longer after zipping.
 
 ## Regenerate Icons
 

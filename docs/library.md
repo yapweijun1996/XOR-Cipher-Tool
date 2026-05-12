@@ -45,10 +45,39 @@ XORNumberCipher.decryptFromNumbers(ciphertext, key)
 XORNumberCipher.validateNumberCiphertext(ciphertext)
 XORNumberCipher.formatNumberGroups(ciphertext)
 XORNumberCipher.cleanCiphertext(ciphertext)
+await XORNumberCipher.zipNumberCiphertext(ciphertext)
+await XORNumberCipher.unzipNumberCiphertext(zippedCiphertext)
+await XORNumberCipher.encryptToZippedNumbers(message, key)
+await XORNumberCipher.decryptFromZippedNumbers(zippedCiphertext, key)
 XORNumberCipher.buildXorRows(message, key, limit)
 ```
 
 `XORCipherTool` is kept as a browser alias for compatibility.
+
+## Optional Zip / Gzip Layer
+
+The default cipher output is already numeric. If the numeric ciphertext is very long, the library can gzip that numeric string and convert the compressed bytes back into 3-digit numbers.
+
+```js
+const ciphertext = XORNumberCipher.encrypt("Long message...", "secret-key");
+const zipped = await XORNumberCipher.zipNumberCiphertext(ciphertext);
+const restoredCiphertext = await XORNumberCipher.unzipNumberCiphertext(zipped);
+const plaintext = XORNumberCipher.decrypt(restoredCiphertext, "secret-key");
+```
+
+Shortcut:
+
+```js
+const zipped = await XORNumberCipher.encryptToZippedNumbers("Long message...", "secret-key");
+const plaintext = await XORNumberCipher.decryptFromZippedNumbers(zipped, "secret-key");
+```
+
+Important:
+
+- The zipped output is still number-only.
+- The zipped output is also grouped as 3 digits per compressed byte.
+- Small messages may become longer after gzip because gzip has header/metadata overhead.
+- This uses `CompressionStream` and `DecompressionStream`, so it needs a modern browser or Node runtime that supports those APIs.
 
 ## Error Behavior
 
@@ -60,6 +89,7 @@ The library throws `Error` for invalid input:
 - Ciphertext contains non-digit characters after whitespace cleanup.
 - Ciphertext length is not divisible by 3.
 - Any 3-digit group is outside `000` to `255`.
+- Zip/unzip APIs throw if `CompressionStream` or `DecompressionStream` is not available.
 
 ## Security Boundary
 

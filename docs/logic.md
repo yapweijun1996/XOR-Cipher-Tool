@@ -22,6 +22,10 @@ XORNumberCipher.decryptFromNumbers(ciphertext, key)
 XORNumberCipher.validateNumberCiphertext(ciphertext)
 XORNumberCipher.formatNumberGroups(ciphertext)
 XORNumberCipher.cleanCiphertext(ciphertext)
+await XORNumberCipher.zipNumberCiphertext(ciphertext)
+await XORNumberCipher.unzipNumberCiphertext(zippedCiphertext)
+await XORNumberCipher.encryptToZippedNumbers(message, key)
+await XORNumberCipher.decryptFromZippedNumbers(zippedCiphertext, key)
 XORNumberCipher.buildXorRows(message, key, limit)
 ```
 
@@ -72,6 +76,22 @@ numberGroup = encryptedByte.toString().padStart(3, "0")
 6. XOR each encrypted byte with the repeated key byte.
 7. Collect decrypted bytes.
 8. Decode bytes back to text with `TextDecoder`.
+
+## Optional Zip Flow
+
+The zip flow is separate from normal encryption:
+
+1. Encrypt message to normal numeric ciphertext.
+2. Gzip the numeric ciphertext string.
+3. Convert compressed bytes back into 3-digit numeric groups.
+
+Unzip reverses that:
+
+1. Convert zipped 3-digit groups back to compressed bytes.
+2. Gunzip into the original numeric ciphertext string.
+3. Decrypt that normal numeric ciphertext with the key.
+
+This keeps the final zipped payload numeric-only, but it is a different format from normal ciphertext. The caller must know whether the input is zipped or normal.
 
 ## Validation Rules
 
