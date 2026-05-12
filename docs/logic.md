@@ -16,7 +16,12 @@ This file exposes a global browser API:
 
 ```js
 await XORNumberCipher.encode(message, key)
+await XORNumberCipher.encode(message, key, { output: "compact" })
 await XORNumberCipher.decode(ciphertext, key)
+await XORNumberCipher.encodeCompact(message, key)
+await XORNumberCipher.decodeCompact(ciphertext, key)
+await XORNumberCipher.encodeBest(message, key, { output: "number" | "compact" | "auto" })
+await XORNumberCipher.decodeAuto(ciphertext, key)
 XORNumberCipher.encrypt(message, key)
 XORNumberCipher.decrypt(ciphertext, key)
 XORNumberCipher.encryptToNumbers(message, key)
@@ -38,7 +43,7 @@ XORNumberCipher.buildXorRows(message, key, limit)
 
 `XORCipherTool` is an alias of the same API for compatibility with earlier demo code.
 
-For engineer/agent usage, `encode()` and `decode()` are the preferred API. They use best mode and include/read the 3-digit mode header.
+For engineer/agent usage, `encode()` and `decode()` are the preferred API. `encode()` keeps number-only best mode by default. `decode()` auto-detects number-only and compact `XC1` formats.
 
 The library also supports CommonJS:
 
@@ -114,6 +119,40 @@ For automatic self-describing output, use best mode:
 
 The first 3 digits are a mode header. `decryptBestNumbers()` reads the header and applies the correct reverse flow.
 
+## Compact Text Flow
+
+Compact text mode is optional. It is intended for engineers, AI agents, and users who can accept non-number ciphertext for shorter output.
+
+The compact pipeline is:
+
+```text
+compress plaintext -> XOR by key -> Base64URL encode
+```
+
+Supported compact headers:
+
+```text
+XC1R = raw XOR bytes
+XC1G = gzip plaintext, then XOR
+XC1D = deflate-raw plaintext, then XOR
+XC1B = brotli plaintext, then XOR when supported
+```
+
+Example output:
+
+```text
+XC1G.A1b2_cd-...
+```
+
+`encodeCompact()` compares supported compact candidates and selects the shortest. `deflate-raw` and brotli are optional because browser and Node support varies.
+
+`decodeAuto()` dispatches by format:
+
+- Starts with `XC1`: compact decode.
+- Digits only: numeric decode. It tries `000/001/002` best headers first, then falls back to legacy raw numeric groups.
+
+This keeps old numeric ciphertext usable while adding compact text output.
+
 ## Validation Rules
 
 Before decrypting:
@@ -123,6 +162,7 @@ Before decrypting:
 - Ciphertext must contain only digits after whitespace is removed.
 - Ciphertext length must be divisible by 3.
 - Each 3-digit group must be between `000` and `255`.
+- Compact ciphertext must match `XC1R.`, `XC1G.`, `XC1D.`, or `XC1B.` with a Base64URL payload.
 
 Before encrypting:
 

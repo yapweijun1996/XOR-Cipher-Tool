@@ -38,6 +38,7 @@ No active implementation task.
 - Changed zip mode to gzip plaintext before XOR encryption and keep normal ciphertext when gzip would make output longer.
 - Added best mode with 000/001/002 headers for normal, gzip-before-encrypt, and gzip+encrypt+gzip.
 - Added high-level encode/decode aliases for engineer and AI agent usage.
+- Added optional compact text output mode with XC1R/XC1G/XC1D/XC1B headers and auto-detect decode.
 
 ## Blocked
 

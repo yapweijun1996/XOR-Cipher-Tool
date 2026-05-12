@@ -28,8 +28,10 @@ const XORNumberCipher = require("./js/xor-number-cipher.js");
 
 const result = await XORNumberCipher.encode("Hello 中文 😀", "secret-key");
 const plaintext = await XORNumberCipher.decode(result.ciphertext, "secret-key");
+const compact = await XORNumberCipher.encode("Hello 中文 😀", "secret-key", { output: "compact" });
 
 console.log(result.ciphertext);
+console.log(compact.ciphertext);
 console.log(plaintext);
 ```
 
@@ -39,7 +41,13 @@ Node 18+ is recommended because it provides `TextEncoder` and `TextDecoder` glob
 
 ```js
 await XORNumberCipher.encode(message, key)
+await XORNumberCipher.encode(message, key, { output: "compact" })
 await XORNumberCipher.decode(ciphertext, key)
+await XORNumberCipher.encodeCompact(message, key)
+await XORNumberCipher.encodeCompact(message, key, { mode: "raw" | "gzip" | "deflate-raw" | "brotli" })
+await XORNumberCipher.decodeCompact(ciphertext, key)
+await XORNumberCipher.encodeBest(message, key, { output: "number" | "compact" | "auto" })
+await XORNumberCipher.decodeAuto(ciphertext, key)
 XORNumberCipher.encrypt(message, key)
 XORNumberCipher.decrypt(ciphertext, key)
 XORNumberCipher.encryptToNumbers(message, key)
@@ -56,6 +64,14 @@ await XORNumberCipher.decryptCompressedFromNumbers(ciphertext, key)
 await XORNumberCipher.encryptToShortestNumbers(message, key)
 await XORNumberCipher.encryptBestNumbers(message, key)
 await XORNumberCipher.decryptBestNumbers(ciphertext, key)
+XORNumberCipher.isNumberCiphertext(ciphertext)
+XORNumberCipher.isCompactCiphertext(ciphertext)
+XORNumberCipher.bytesToBase64Url(bytes)
+XORNumberCipher.base64UrlToBytes(text)
+await XORNumberCipher.compressBytes(bytes, format)
+await XORNumberCipher.decompressBytes(bytes, format)
+await XORNumberCipher.decompressToBytes(bytes, format)
+XORNumberCipher.isCompressionFormatSupported(format)
 XORNumberCipher.buildXorRows(message, key, limit)
 ```
 
@@ -70,7 +86,20 @@ const result = await XORNumberCipher.encode(message, key);
 const plaintext = await XORNumberCipher.decode(result.ciphertext, key);
 ```
 
-`encode()` is an alias for `encryptBestNumbers()`. It compresses, encrypts, and encodes into number groups using the shortest supported mode. `decode()` is an alias for `decryptBestNumbers()` and reads the 3-digit mode header automatically.
+`encode()` keeps number-only output by default for compatibility. It returns best numeric output with a `000`, `001`, or `002` header. `decode()` auto-detects number-only ciphertext and compact `XC1` ciphertext.
+
+Use compact output when non-number ciphertext is acceptable:
+
+```js
+const result = await XORNumberCipher.encode(message, key, { output: "compact" });
+const plaintext = await XORNumberCipher.decode(result.ciphertext, key);
+```
+
+Use auto output when the caller wants the shortest supported result and can accept either numeric or compact text:
+
+```js
+const result = await XORNumberCipher.encodeBest(message, key, { output: "auto" });
+```
 
 ## Optional Zip / Gzip Layer
 
@@ -123,6 +152,53 @@ const plaintext = await XORNumberCipher.decryptBestNumbers(result.ciphertext, ke
 
 Legacy note: `zipNumberCiphertext()` gzips the already-encrypted number string. It remains available for agents that need it, but `encryptBestNumbers()` should be the default for shortest output.
 
+## Compact Text Mode
+
+Compact mode uses this pipeline:
+
+```text
+compress plaintext -> XOR by key -> Base64URL encode
+```
+
+The output is self-describing:
+
+```text
+XC1R.<base64url> = raw XOR bytes
+XC1G.<base64url> = gzip plaintext -> XOR -> Base64URL
+XC1D.<base64url> = deflate-raw plaintext -> XOR -> Base64URL
+XC1B.<base64url> = brotli plaintext -> XOR -> Base64URL
+```
+
+`encodeCompact()` compares supported compact candidates and returns the shortest. `deflate-raw` and brotli are feature-detected; unsupported formats are skipped.
+
+```js
+const result = await XORNumberCipher.encodeCompact(message, key);
+console.log(result.ciphertext);
+console.log(result.mode);
+console.log(result.candidates);
+
+const plaintext = await XORNumberCipher.decodeCompact(result.ciphertext, key);
+```
+
+To test a specific compact mode:
+
+```js
+const gzip = await XORNumberCipher.encodeCompact(message, key, { mode: "gzip" });
+```
+
+Compact metadata shape:
+
+```js
+{
+  ciphertext,
+  format: "compact",
+  mode: "XC1G",
+  modeName: "gzip-before-xor-base64url",
+  selectedLength,
+  candidates
+}
+```
+
 ## Error Behavior
 
 The library throws `Error` for invalid input:
@@ -134,6 +210,7 @@ The library throws `Error` for invalid input:
 - Ciphertext length is not divisible by 3.
 - Any 3-digit group is outside `000` to `255`.
 - Zip/unzip APIs throw if `CompressionStream` or `DecompressionStream` is not available.
+- Requested compact compression mode throws if the runtime does not support it.
 
 ## Security Boundary
 

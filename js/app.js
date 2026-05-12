@@ -28,7 +28,7 @@
   };
 
   let lastContinuousCipher = "";
-  let lastCipherIsZipped = false;
+  let lastCipherFormat = "number";
   let deferredInstallPrompt = null;
   let waitingWorker = null;
 
@@ -40,18 +40,21 @@
     const plain = els.plainText.value;
     const cipherValue = els.cipherText.value;
     const cleanCipher = cipher.cleanCiphertext(cipherValue);
-    const groupCount = cleanCipher.length > 0 && cleanCipher.length % 3 === 0
+    const compactMode = els.zipOutput.checked || cipher.isCompactCiphertext(cleanCipher);
+    const groupCount = !compactMode && cleanCipher.length > 0 && cleanCipher.length % 3 === 0
       ? cleanCipher.length / 3
       : 0;
 
     els.plainCounter.textContent = `${countCodePoints(plain)} chars / ${encoder.encode(plain).length} bytes`;
-    els.cipherCounter.textContent = `${cleanCipher.length} digits / ${groupCount} groups`;
+    els.cipherCounter.textContent = compactMode
+      ? `${cleanCipher.length} chars`
+      : `${cleanCipher.length} digits / ${groupCount} groups`;
   }
 
   function updateModeLabels() {
     if (els.zipOutput.checked) {
-      els.encryptButton.textContent = "Encrypt Best";
-      els.decryptButton.textContent = "Decrypt Best";
+      els.encryptButton.textContent = "Encrypt Compact";
+      els.decryptButton.textContent = "Decrypt Compact";
     } else {
       els.encryptButton.textContent = "Encrypt to Numbers";
       els.decryptButton.textContent = "Decrypt from Numbers";
@@ -82,7 +85,7 @@
 
   function refreshCipherDisplay() {
     if (!lastContinuousCipher) return;
-    els.cipherText.value = els.groupOutput.checked
+    els.cipherText.value = els.groupOutput.checked && cipher.isNumberCiphertext(lastContinuousCipher)
       ? cipher.formatNumberGroups(lastContinuousCipher)
       : lastContinuousCipher;
     updateCounters();
@@ -128,21 +131,22 @@
       let result = null;
 
       if (els.zipOutput.checked) {
-        result = await cipher.encryptBestNumbers(message, key);
-        lastCipherIsZipped = result.mode !== "000";
+        result = await cipher.encode(message, key, { output: "compact" });
+        lastCipherFormat = "compact";
         lastContinuousCipher = result.ciphertext;
       } else {
-        lastCipherIsZipped = false;
-        lastContinuousCipher = cipher.encrypt(message, key);
+        result = await cipher.encode(message, key, { output: "number" });
+        lastCipherFormat = "number";
+        lastContinuousCipher = result.ciphertext;
       }
 
       refreshCipherDisplay();
       renderTable(cipher.buildXorRows(message, key, MAX_TABLE_ROWS));
       updateCounters();
-      if (result) {
-        setStatus(`Best mode ${result.mode} (${result.modeName}). Selected ${result.selectedLength} digits; saved ${result.savedDigits} digits.`, "success");
+      if (result.format === "compact") {
+        setStatus(`Compact mode ${result.mode} (${result.modeName}). Selected ${result.selectedLength} chars.`, "success");
       } else {
-        setStatus("Encrypted into 3-digit number groups.", "success");
+        setStatus(`Number mode ${result.mode} (${result.modeName}). Selected ${result.selectedLength} digits; saved ${result.savedDigits} digits.`, "success");
       }
     } catch (error) {
       handleError(error);
@@ -152,18 +156,16 @@
   async function onDecrypt() {
     try {
       const key = els.keyInput.value;
-      const decrypted = els.zipOutput.checked
-        ? await cipher.decryptBestNumbers(els.cipherText.value, key)
-        : cipher.decrypt(els.cipherText.value, key);
+      const decrypted = await cipher.decode(els.cipherText.value, key);
       els.plainText.value = decrypted;
-      lastContinuousCipher = cipher.validateNumberCiphertext(els.cipherText.value);
-      lastCipherIsZipped = els.zipOutput.checked;
+      lastContinuousCipher = cipher.cleanCiphertext(els.cipherText.value);
+      lastCipherFormat = cipher.isCompactCiphertext(lastContinuousCipher) ? "compact" : "number";
       refreshCipherDisplay();
       renderTable(cipher.buildXorRows(decrypted, key, MAX_TABLE_ROWS));
       updateCounters();
-      setStatus(lastCipherIsZipped
-        ? "Unzipped and decrypted successfully."
-        : "Decrypted successfully.", "success");
+      setStatus(lastCipherFormat === "compact"
+        ? "Compact ciphertext decrypted successfully."
+        : "Number ciphertext decrypted successfully.", "success");
     } catch (error) {
       handleError(error);
     }
@@ -174,7 +176,7 @@
     els.plainText.value = "";
     els.cipherText.value = "";
     lastContinuousCipher = "";
-    lastCipherIsZipped = false;
+    lastCipherFormat = "number";
     renderTable([]);
     updateCounters();
     setStatus("Cleared.", "success");
@@ -202,9 +204,10 @@
     els.groupOutput.addEventListener("change", refreshCipherDisplay);
     els.zipOutput.addEventListener("change", () => {
       updateModeLabels();
+      updateCounters();
       setStatus(els.zipOutput.checked
-        ? "Best mode enabled. Output includes a 000/001/002 mode header."
-        : "Best mode disabled. Ciphertext must be normal numbers when decrypting.", "");
+        ? "Compact text output enabled. Output uses an XC1 mode header."
+        : "Number-only output enabled. Output uses 000/001/002 numeric mode headers.", "");
     });
     els.showTable.addEventListener("change", () => {
       els.tableSection.hidden = !els.showTable.checked;

@@ -1,6 +1,6 @@
 # XOR Cipher Tool
 
-A browser-based XOR cipher demo that encrypts text into a numeric ciphertext format.
+A browser-based XOR cipher demo that encrypts text into number-only ciphertext by default, with an optional compact text format for shorter engineer/agent output.
 
 This project is intended for learning and demonstration. It is not secure encryption and must not be used for passwords, tokens, private documents, or production security.
 
@@ -12,12 +12,13 @@ Build a simple static web tool that:
 - Converts the message and key into UTF-8 bytes.
 - Applies XOR byte by byte.
 - Outputs a numeric ciphertext where every encrypted byte is stored as a 3-digit number.
+- Optionally outputs compact text with a self-describing `XC1` header.
 - Decrypts the numeric ciphertext back into the original text.
 - Provides a reusable single-file JavaScript library for other engineers and AI agents.
 
 ## Cipher Format
 
-The ciphertext is a continuous number string.
+The default ciphertext is a continuous number string.
 
 Each encrypted byte is formatted as exactly 3 digits:
 
@@ -37,6 +38,23 @@ The decryptor reads the ciphertext in 3-digit groups:
 072 005 099 188
 ```
 
+Best number mode prefixes the payload with a 3-digit mode header:
+
+```text
+000 = normal XOR number ciphertext
+001 = gzip plaintext -> XOR compressed bytes -> number ciphertext
+002 = gzip plaintext -> XOR compressed bytes -> gzip number ciphertext -> number ciphertext
+```
+
+Compact text mode is optional and may contain letters, digits, `_`, `-`, and `.`:
+
+```text
+XC1R.<base64url> = raw XOR bytes
+XC1G.<base64url> = gzip plaintext -> XOR -> Base64URL
+XC1D.<base64url> = deflate-raw plaintext -> XOR -> Base64URL
+XC1B.<base64url> = brotli plaintext -> XOR -> Base64URL, only when supported
+```
+
 ## Required Features
 
 - Encrypt plaintext into numeric ciphertext.
@@ -50,6 +68,7 @@ The decryptor reads the ciphertext in 3-digit groups:
 - Clear/reset all fields.
 - Show before/after textarea counts: plaintext characters/bytes and ciphertext digits/groups.
 - Allow end users to gzip plaintext before encryption when it makes the numeric output shorter.
+- Allow end users to switch to compact text output when non-number ciphertext is acceptable.
 - Show a warning that XOR cipher is for learning only.
 
 ## Recommended Features
@@ -130,9 +149,11 @@ Load it in any browser page:
 <script src="./js/xor-number-cipher.js"></script>
 <script>
   const result = await XORNumberCipher.encode("Hello 中文 😀", "secret-key");
+  const compact = await XORNumberCipher.encode("Hello 中文 😀", "secret-key", { output: "compact" });
   const plaintext = await XORNumberCipher.decode(result.ciphertext, "secret-key");
 
   console.log(result.ciphertext);
+  console.log(compact.ciphertext);
   console.log(plaintext);
 </script>
 ```
@@ -141,7 +162,12 @@ Available API:
 
 ```js
 await XORNumberCipher.encode(message, key)
+await XORNumberCipher.encode(message, key, { output: "compact" })
 await XORNumberCipher.decode(ciphertext, key)
+await XORNumberCipher.encodeCompact(message, key)
+await XORNumberCipher.decodeCompact(ciphertext, key)
+await XORNumberCipher.encodeBest(message, key, { output: "number" | "compact" | "auto" })
+await XORNumberCipher.decodeAuto(ciphertext, key)
 XORNumberCipher.encrypt(message, key)
 XORNumberCipher.decrypt(ciphertext, key)
 XORNumberCipher.encryptToNumbers(message, key)
@@ -158,6 +184,9 @@ await XORNumberCipher.decryptCompressedFromNumbers(ciphertext, key)
 await XORNumberCipher.encryptToShortestNumbers(message, key)
 await XORNumberCipher.encryptBestNumbers(message, key)
 await XORNumberCipher.decryptBestNumbers(ciphertext, key)
+XORNumberCipher.bytesToBase64Url(bytes)
+XORNumberCipher.base64UrlToBytes(text)
+XORNumberCipher.isCompressionFormatSupported(format)
 XORNumberCipher.buildXorRows(message, key, limit)
 ```
 
@@ -169,6 +198,7 @@ Node or AI agent scripts can also require it:
 const XORNumberCipher = require("./js/xor-number-cipher.js");
 
 const result = await XORNumberCipher.encode("Hello 中文 😀", "secret-key");
+const compact = await XORNumberCipher.encode("Hello 中文 😀", "secret-key", { output: "compact" });
 const plaintext = await XORNumberCipher.decode(result.ciphertext, "secret-key");
 ```
 
@@ -181,9 +211,9 @@ const result = await XORNumberCipher.encode(message, key);
 const message = await XORNumberCipher.decode(result.ciphertext, key);
 ```
 
-`encode()` uses best mode automatically and returns metadata such as `mode`, `modeName`, and `savedDigits`.
+`encode()` keeps number-only output by default for compatibility and returns metadata such as `format`, `mode`, `modeName`, and `selectedLength`.
 
-For very long text, the UI can auto-select the shortest format. Best mode prefixes output with a 3-digit mode header: `000` normal, `001` gzip-before-encrypt, `002` gzip-before-encrypt then gzip again.
+Use `{ output: "compact" }` when letters and symbols are allowed and shorter output is preferred. `decode()` auto-detects number-only and `XC1` compact ciphertext.
 
 ## Regenerate Icons
 

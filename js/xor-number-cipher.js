@@ -14,6 +14,28 @@
 
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
+  const COMPACT_FORMATS = {
+    R: {
+      mode: "XC1R",
+      modeName: "raw-xor-base64url",
+      compression: null,
+    },
+    G: {
+      mode: "XC1G",
+      modeName: "gzip-before-xor-base64url",
+      compression: "gzip",
+    },
+    D: {
+      mode: "XC1D",
+      modeName: "deflate-raw-before-xor-base64url",
+      compression: "deflate-raw",
+    },
+    B: {
+      mode: "XC1B",
+      modeName: "brotli-before-xor-base64url",
+      compression: "brotli",
+    },
+  };
 
   function requireValue(value, label) {
     if (!value) {
@@ -23,6 +45,15 @@
 
   function cleanCiphertext(ciphertext) {
     return String(ciphertext || "").replace(/\s+/g, "");
+  }
+
+  function isCompactCiphertext(ciphertext) {
+    return cleanCiphertext(ciphertext).startsWith("XC1");
+  }
+
+  function isNumberCiphertext(ciphertext) {
+    const clean = cleanCiphertext(ciphertext);
+    return clean.length > 0 && /^\d+$/.test(clean);
   }
 
   function validateNumberCiphertext(ciphertext) {
@@ -60,24 +91,12 @@
   }
 
   function encryptBytesToNumbers(bytes, key) {
-    requireValue(key, "Key");
-
-    const keyBytes = encoder.encode(key);
-    let output = "";
-
-    for (let i = 0; i < bytes.length; i += 1) {
-      const encryptedByte = bytes[i] ^ keyBytes[i % keyBytes.length];
-      output += String(encryptedByte).padStart(3, "0");
-    }
-
-    return output;
+    return bytesToNumberGroups(xorBytes(bytes, key));
   }
 
   function decryptFromNumbers(ciphertext, key) {
     requireValue(key, "Key");
 
-    const clean = validateNumberCiphertext(ciphertext);
-    const keyBytes = encoder.encode(key);
     const outputBytes = decryptNumbersToBytes(ciphertext, key);
 
     return decoder.decode(outputBytes);
@@ -87,16 +106,20 @@
     requireValue(key, "Key");
 
     const clean = validateNumberCiphertext(ciphertext);
-    const keyBytes = encoder.encode(key);
-    const outputBytes = [];
+    return xorBytes(numberGroupsToBytes(clean), key);
+  }
 
-    for (let i = 0; i < clean.length; i += 3) {
-      const encryptedByte = Number(clean.slice(i, i + 3));
-      const keyByte = keyBytes[(i / 3) % keyBytes.length];
-      outputBytes.push(encryptedByte ^ keyByte);
+  function xorBytes(bytes, key) {
+    requireValue(key, "Key");
+
+    const keyBytes = encoder.encode(key);
+    const outputBytes = new Uint8Array(bytes.length);
+
+    for (let i = 0; i < bytes.length; i += 1) {
+      outputBytes[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
     }
 
-    return new Uint8Array(outputBytes);
+    return outputBytes;
   }
 
   function bytesToNumberGroups(bytes) {
@@ -114,6 +137,10 @@
     return new Uint8Array(bytes);
   }
 
+  function normalizeCompressionFormat(format) {
+    return format || "gzip";
+  }
+
   function requireCompressionStream(type) {
     const ctor = root[type];
     if (typeof ctor !== "function") {
@@ -122,21 +149,83 @@
     return ctor;
   }
 
-  async function compressBytes(bytes) {
+  function isCompressionFormatSupported(format) {
+    const normalized = normalizeCompressionFormat(format);
+
+    if (!root.CompressionStream || !root.DecompressionStream) {
+      return false;
+    }
+
+    try {
+      new root.CompressionStream(normalized);
+      new root.DecompressionStream(normalized);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function bytesToBinary(bytes) {
+    let binary = "";
+    const chunkSize = 0x8000;
+
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+
+    return binary;
+  }
+
+  function binaryToBytes(binary) {
+    const bytes = new Uint8Array(binary.length);
+
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+
+    return bytes;
+  }
+
+  function bytesToBase64Url(bytes) {
+    const base64 = typeof Buffer !== "undefined"
+      ? Buffer.from(bytes).toString("base64")
+      : btoa(bytesToBinary(bytes));
+
+    return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/u, "");
+  }
+
+  function base64UrlToBytes(text) {
+    const clean = cleanCiphertext(text);
+
+    if (!/^[A-Za-z0-9_-]*$/u.test(clean)) {
+      throw new Error("Compact ciphertext payload must be Base64URL text.");
+    }
+
+    const base64 = clean.replace(/-/g, "+").replace(/_/g, "/")
+      + "=".repeat((4 - (clean.length % 4)) % 4);
+
+    if (typeof Buffer !== "undefined") {
+      return new Uint8Array(Buffer.from(base64, "base64"));
+    }
+
+    return binaryToBytes(atob(base64));
+  }
+
+  async function compressBytes(bytes, format) {
+    const normalized = normalizeCompressionFormat(format);
     const Compression = requireCompressionStream("CompressionStream");
-    const stream = new Blob([bytes]).stream().pipeThrough(new Compression("gzip"));
+    const stream = new Blob([bytes]).stream().pipeThrough(new Compression(normalized));
     return new Uint8Array(await new Response(stream).arrayBuffer());
   }
 
-  async function decompressBytes(bytes) {
-    const Decompression = requireCompressionStream("DecompressionStream");
-    const stream = new Blob([bytes]).stream().pipeThrough(new Decompression("gzip"));
-    return await new Response(stream).text();
+  async function decompressBytes(bytes, format) {
+    return decoder.decode(await decompressToBytes(bytes, format));
   }
 
-  async function decompressToBytes(bytes) {
+  async function decompressToBytes(bytes, format) {
+    const normalized = normalizeCompressionFormat(format);
     const Decompression = requireCompressionStream("DecompressionStream");
-    const stream = new Blob([bytes]).stream().pipeThrough(new Decompression("gzip"));
+    const stream = new Blob([bytes]).stream().pipeThrough(new Decompression(normalized));
     return new Uint8Array(await new Response(stream).arrayBuffer());
   }
 
@@ -273,6 +362,196 @@
     throw new Error(`Unsupported best ciphertext mode: ${mode}.`);
   }
 
+  function normalizeCompactMode(mode) {
+    if (!mode || mode === "best") return null;
+
+    const normalized = String(mode).toLowerCase();
+    if (normalized === "raw" || normalized === "xc1r" || normalized === "r") return "R";
+    if (normalized === "gzip" || normalized === "xc1g" || normalized === "g") return "G";
+    if (normalized === "deflate-raw" || normalized === "deflate" || normalized === "xc1d" || normalized === "d") return "D";
+    if (normalized === "brotli" || normalized === "xc1b" || normalized === "b") return "B";
+
+    throw new Error(`Unsupported compact mode: ${mode}.`);
+  }
+
+  async function buildCompactCandidate(plainBytes, key, modeCode) {
+    const config = COMPACT_FORMATS[modeCode];
+    if (!config) {
+      throw new Error(`Unsupported compact mode: ${modeCode}.`);
+    }
+
+    if (config.compression && !isCompressionFormatSupported(config.compression)) {
+      return {
+        mode: config.mode,
+        modeName: config.modeName,
+        supported: false,
+        skipped: true,
+        reason: `${config.compression} is not available in this runtime.`,
+      };
+    }
+
+    const payloadBytes = config.compression
+      ? await compressBytes(plainBytes, config.compression)
+      : plainBytes;
+    const encryptedBytes = xorBytes(payloadBytes, key);
+    const ciphertext = `${config.mode}.${bytesToBase64Url(encryptedBytes)}`;
+
+    return {
+      ciphertext,
+      format: "compact",
+      mode: config.mode,
+      modeName: config.modeName,
+      compression: config.compression || "none",
+      selectedLength: ciphertext.length,
+      length: ciphertext.length,
+      supported: true,
+      skipped: false,
+    };
+  }
+
+  async function encodeCompact(message, key, options) {
+    requireValue(message, "Message");
+    requireValue(key, "Key");
+
+    const plainBytes = encoder.encode(message);
+    const requestedMode = normalizeCompactMode(options && options.mode);
+    const modeCodes = requestedMode ? [requestedMode] : ["R", "G", "D", "B"];
+    const candidates = [];
+
+    for (const modeCode of modeCodes) {
+      const candidate = await buildCompactCandidate(plainBytes, key, modeCode);
+      candidates.push(candidate);
+    }
+
+    const supportedCandidates = candidates.filter((candidate) => candidate.supported);
+    if (!supportedCandidates.length) {
+      throw new Error("No compact output modes are available in this runtime.");
+    }
+
+    if (requestedMode && supportedCandidates.length !== candidates.length) {
+      throw new Error(candidates[0].reason || "Requested compact mode is not available.");
+    }
+
+    const best = supportedCandidates.reduce((winner, candidate) => (
+      candidate.length < winner.length ? candidate : winner
+    ));
+
+    return {
+      ciphertext: best.ciphertext,
+      format: "compact",
+      mode: best.mode,
+      modeName: best.modeName,
+      compression: best.compression,
+      selectedLength: best.length,
+      candidates,
+    };
+  }
+
+  async function decodeCompact(ciphertext, key) {
+    requireValue(key, "Key");
+
+    const clean = cleanCiphertext(ciphertext);
+    requireValue(clean, "Ciphertext");
+
+    const match = clean.match(/^(XC1[RGDB])\.([A-Za-z0-9_-]*)$/u);
+    if (!match) {
+      throw new Error("Compact ciphertext must use XC1R, XC1G, XC1D, or XC1B format.");
+    }
+
+    const modeCode = match[1].slice(-1);
+    const config = COMPACT_FORMATS[modeCode];
+    const encryptedBytes = base64UrlToBytes(match[2]);
+    const payloadBytes = xorBytes(encryptedBytes, key);
+
+    if (!config.compression) {
+      return decoder.decode(payloadBytes);
+    }
+
+    return decoder.decode(await decompressToBytes(payloadBytes, config.compression));
+  }
+
+  async function decodeAuto(ciphertext, key) {
+    const clean = cleanCiphertext(ciphertext);
+    requireValue(clean, "Ciphertext");
+
+    if (isCompactCiphertext(clean)) {
+      return await decodeCompact(clean, key);
+    }
+
+    if (isNumberCiphertext(clean)) {
+      const mode = clean.slice(0, 3);
+      if (["000", "001", "002"].includes(mode) && clean.length >= 6) {
+        try {
+          return await decryptBestNumbers(clean, key);
+        } catch (error) {
+          return decryptFromNumbers(clean, key);
+        }
+      }
+
+      return decryptFromNumbers(clean, key);
+    }
+
+    throw new Error("Ciphertext must be numeric or start with XC1 compact format.");
+  }
+
+  async function encodeBest(message, key, options) {
+    const output = options && options.output ? options.output : "auto";
+
+    if (output === "number") {
+      return {
+        format: "number",
+        ...await encryptBestNumbers(message, key),
+      };
+    }
+
+    if (output === "compact") {
+      return await encodeCompact(message, key, options);
+    }
+
+    if (output !== "auto") {
+      throw new Error(`Unsupported output format: ${output}.`);
+    }
+
+    const numberResult = {
+      format: "number",
+      ...await encryptBestNumbers(message, key),
+    };
+    const compactResult = await encodeCompact(message, key, options);
+    const best = compactResult.selectedLength < numberResult.selectedLength
+      ? compactResult
+      : numberResult;
+
+    return {
+      ...best,
+      candidates: [
+        {
+          format: "number",
+          mode: numberResult.mode,
+          modeName: numberResult.modeName,
+          length: numberResult.selectedLength,
+          selectedLength: numberResult.selectedLength,
+        },
+        {
+          format: "compact",
+          mode: compactResult.mode,
+          modeName: compactResult.modeName,
+          length: compactResult.selectedLength,
+          selectedLength: compactResult.selectedLength,
+        },
+      ],
+    };
+  }
+
+  async function encode(message, key, options) {
+    const output = options && options.output ? options.output : "number";
+
+    if (output === "number") {
+      return await encodeBest(message, key, { output: "number" });
+    }
+
+    return await encodeBest(message, key, options);
+  }
+
   function buildXorRows(message, key, limit) {
     requireValue(key, "Key");
 
@@ -298,17 +577,26 @@
   }
 
   return {
-    encode: encryptBestNumbers,
-    decode: decryptBestNumbers,
+    encode,
+    decode: decodeAuto,
     encrypt: encryptToNumbers,
     decrypt: decryptFromNumbers,
     encryptToNumbers,
     decryptFromNumbers,
     encryptBytesToNumbers,
     decryptNumbersToBytes,
+    xorBytes,
     validateNumberCiphertext,
     formatNumberGroups,
     cleanCiphertext,
+    isNumberCiphertext,
+    isCompactCiphertext,
+    bytesToBase64Url,
+    base64UrlToBytes,
+    compressBytes,
+    decompressBytes,
+    decompressToBytes,
+    isCompressionFormatSupported,
     zipNumberCiphertext,
     unzipNumberCiphertext,
     encryptToZippedNumbers,
@@ -318,6 +606,10 @@
     encryptToShortestNumbers,
     encryptBestNumbers,
     decryptBestNumbers,
+    encodeCompact,
+    decodeCompact,
+    encodeBest,
+    decodeAuto,
     buildXorRows,
   };
 }));
