@@ -33,6 +33,7 @@ No active implementation task.
 - Added library documentation for browser and Node/CommonJS usage.
 - Added live plaintext and ciphertext length counters for end users.
 - Added optional gzip-to-number APIs for long numeric ciphertext.
+- Fixed PWA update flow so waiting Service Workers show reload and update checks bypass cached `sw.js`.
 
 ## Blocked
 

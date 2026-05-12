@@ -60,7 +60,7 @@ Icon rules:
 Use a versioned cache:
 
 ```js
-const VERSION = "2026-05-12-1";
+const VERSION = "2026-05-12-3";
 const CACHE_NAME = `xor-cipher-${VERSION}`;
 ```
 
@@ -71,6 +71,14 @@ Recommended strategy:
 - Clear old caches during `activate`.
 
 When adding or renaming JavaScript files, update `PRECACHE_URLS` in `sw.js` and bump the Service Worker `VERSION`.
+
+Register the Service Worker with `updateViaCache: "none"` so the browser does not reuse a cached `sw.js` during update checks:
+
+```js
+navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" });
+```
+
+On page load, also check `registration.waiting`. A new worker can already be waiting before the current page adds the `updatefound` listener.
 
 For form-based tools, prefer showing an update banner instead of forcing silent reloads.
 

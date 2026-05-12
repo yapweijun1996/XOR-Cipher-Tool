@@ -104,6 +104,11 @@
     setStatus(error.message || "Something went wrong.", "error");
   }
 
+  function showUpdateBanner(worker) {
+    waitingWorker = worker;
+    els.updateBanner.hidden = false;
+  }
+
   function onEncrypt() {
     try {
       const message = els.plainText.value;
@@ -188,19 +193,23 @@
   function setupServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
 
-    navigator.serviceWorker.register("./sw.js").then((registration) => {
+    navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).then((registration) => {
+      if (registration.waiting) {
+        showUpdateBanner(registration.waiting);
+      }
+
       registration.addEventListener("updatefound", () => {
         const worker = registration.installing;
         if (!worker) return;
 
         worker.addEventListener("statechange", () => {
           if (worker.state === "installed" && navigator.serviceWorker.controller) {
-            waitingWorker = worker;
-            els.updateBanner.hidden = false;
+            showUpdateBanner(worker);
           }
         });
       });
 
+      registration.update();
       setInterval(() => registration.update(), 60 * 60 * 1000);
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible") {
