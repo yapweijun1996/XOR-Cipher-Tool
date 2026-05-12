@@ -298,6 +298,8 @@
   }
 
   return {
+    encode: encryptBestNumbers,
+    decode: decryptBestNumbers,
     encrypt: encryptToNumbers,
     decrypt: decryptFromNumbers,
     encryptToNumbers,

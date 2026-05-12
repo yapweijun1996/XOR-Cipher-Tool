@@ -15,6 +15,8 @@ js/xor-number-cipher.js
 This file exposes a global browser API:
 
 ```js
+await XORNumberCipher.encode(message, key)
+await XORNumberCipher.decode(ciphertext, key)
 XORNumberCipher.encrypt(message, key)
 XORNumberCipher.decrypt(ciphertext, key)
 XORNumberCipher.encryptToNumbers(message, key)
@@ -35,6 +37,8 @@ XORNumberCipher.buildXorRows(message, key, limit)
 ```
 
 `XORCipherTool` is an alias of the same API for compatibility with earlier demo code.
+
+For engineer/agent usage, `encode()` and `decode()` are the preferred API. They use best mode and include/read the 3-digit mode header.
 
 The library also supports CommonJS:
 

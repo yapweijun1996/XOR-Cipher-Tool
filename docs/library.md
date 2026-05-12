@@ -26,10 +26,10 @@ It has no DOM dependency. The web app UI in `js/app.js` uses this same library.
 ```js
 const XORNumberCipher = require("./js/xor-number-cipher.js");
 
-const ciphertext = XORNumberCipher.encrypt("Hello 中文 😀", "secret-key");
-const plaintext = XORNumberCipher.decrypt(ciphertext, "secret-key");
+const result = await XORNumberCipher.encode("Hello 中文 😀", "secret-key");
+const plaintext = await XORNumberCipher.decode(result.ciphertext, "secret-key");
 
-console.log(ciphertext);
+console.log(result.ciphertext);
 console.log(plaintext);
 ```
 
@@ -38,6 +38,8 @@ Node 18+ is recommended because it provides `TextEncoder` and `TextDecoder` glob
 ## API
 
 ```js
+await XORNumberCipher.encode(message, key)
+await XORNumberCipher.decode(ciphertext, key)
 XORNumberCipher.encrypt(message, key)
 XORNumberCipher.decrypt(ciphertext, key)
 XORNumberCipher.encryptToNumbers(message, key)
@@ -58,6 +60,17 @@ XORNumberCipher.buildXorRows(message, key, limit)
 ```
 
 `XORCipherTool` is kept as a browser alias for compatibility.
+
+## Recommended Agent API
+
+Agents and engineers should prefer the high-level aliases:
+
+```js
+const result = await XORNumberCipher.encode(message, key);
+const plaintext = await XORNumberCipher.decode(result.ciphertext, key);
+```
+
+`encode()` is an alias for `encryptBestNumbers()`. It compresses, encrypts, and encodes into number groups using the shortest supported mode. `decode()` is an alias for `decryptBestNumbers()` and reads the 3-digit mode header automatically.
 
 ## Optional Zip / Gzip Layer
 

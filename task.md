@@ -37,6 +37,7 @@ No active implementation task.
 - Added a UI checkbox for zipped numeric ciphertext mode.
 - Changed zip mode to gzip plaintext before XOR encryption and keep normal ciphertext when gzip would make output longer.
 - Added best mode with 000/001/002 headers for normal, gzip-before-encrypt, and gzip+encrypt+gzip.
+- Added high-level encode/decode aliases for engineer and AI agent usage.
 
 ## Blocked
 

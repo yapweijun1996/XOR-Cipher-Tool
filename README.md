@@ -129,10 +129,10 @@ Load it in any browser page:
 ```html
 <script src="./js/xor-number-cipher.js"></script>
 <script>
-  const ciphertext = XORNumberCipher.encrypt("Hello 中文 😀", "secret-key");
-  const plaintext = XORNumberCipher.decrypt(ciphertext, "secret-key");
+  const result = await XORNumberCipher.encode("Hello 中文 😀", "secret-key");
+  const plaintext = await XORNumberCipher.decode(result.ciphertext, "secret-key");
 
-  console.log(ciphertext);
+  console.log(result.ciphertext);
   console.log(plaintext);
 </script>
 ```
@@ -140,6 +140,8 @@ Load it in any browser page:
 Available API:
 
 ```js
+await XORNumberCipher.encode(message, key)
+await XORNumberCipher.decode(ciphertext, key)
 XORNumberCipher.encrypt(message, key)
 XORNumberCipher.decrypt(ciphertext, key)
 XORNumberCipher.encryptToNumbers(message, key)
@@ -166,11 +168,20 @@ Node or AI agent scripts can also require it:
 ```js
 const XORNumberCipher = require("./js/xor-number-cipher.js");
 
-const ciphertext = XORNumberCipher.encrypt("Hello 中文 😀", "secret-key");
-const plaintext = XORNumberCipher.decrypt(ciphertext, "secret-key");
+const result = await XORNumberCipher.encode("Hello 中文 😀", "secret-key");
+const plaintext = await XORNumberCipher.decode(result.ciphertext, "secret-key");
 ```
 
 More details: [docs/library.md](docs/library.md).
+
+For engineers and AI agents, prefer:
+
+```js
+const result = await XORNumberCipher.encode(message, key);
+const message = await XORNumberCipher.decode(result.ciphertext, key);
+```
+
+`encode()` uses best mode automatically and returns metadata such as `mode`, `modeName`, and `savedDigits`.
 
 For very long text, the UI can auto-select the shortest format. Best mode prefixes output with a 3-digit mode header: `000` normal, `001` gzip-before-encrypt, `002` gzip-before-encrypt then gzip again.
 
