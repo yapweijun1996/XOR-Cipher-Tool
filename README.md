@@ -13,6 +13,7 @@ Build a simple static web tool that:
 - Applies XOR byte by byte.
 - Outputs a numeric ciphertext where every encrypted byte is stored as a 3-digit number.
 - Decrypts the numeric ciphertext back into the original text.
+- Provides a reusable single-file JavaScript library for other engineers and AI agents.
 
 ## Cipher Format
 
@@ -47,6 +48,7 @@ The decryptor reads the ciphertext in 3-digit groups:
 - Validate that every 3-digit group is between `000` and `255`.
 - Copy encrypted and decrypted output.
 - Clear/reset all fields.
+- Show before/after textarea counts: plaintext characters/bytes and ciphertext digits/groups.
 - Show a warning that XOR cipher is for learning only.
 
 ## Recommended Features
@@ -76,6 +78,7 @@ message byte | key byte | XOR result | 3-digit output
 ├── offline.html
 ├── docs/
 │   ├── logic.md
+│   ├── library.md
 │   ├── pwa-standard.md
 │   └── documentation-standard.md
 ├── .github/
@@ -88,6 +91,7 @@ message byte | key byte | XOR result | 3-digit output
 │   ├── icon-maskable-512.png
 │   └── apple-touch-icon-180.png
 ├── js/
+│   ├── xor-number-cipher.js
 │   └── app.js
 ├── scripts/
 │   └── generate-icons.js
@@ -110,6 +114,53 @@ Then open:
 ```text
 http://127.0.0.1:8765/
 ```
+
+## Use as a Library
+
+The reusable cipher logic is in:
+
+```text
+js/xor-number-cipher.js
+```
+
+Load it in any browser page:
+
+```html
+<script src="./js/xor-number-cipher.js"></script>
+<script>
+  const ciphertext = XORNumberCipher.encrypt("Hello 中文 😀", "secret-key");
+  const plaintext = XORNumberCipher.decrypt(ciphertext, "secret-key");
+
+  console.log(ciphertext);
+  console.log(plaintext);
+</script>
+```
+
+Available API:
+
+```js
+XORNumberCipher.encrypt(message, key)
+XORNumberCipher.decrypt(ciphertext, key)
+XORNumberCipher.encryptToNumbers(message, key)
+XORNumberCipher.decryptFromNumbers(ciphertext, key)
+XORNumberCipher.validateNumberCiphertext(ciphertext)
+XORNumberCipher.formatNumberGroups(ciphertext)
+XORNumberCipher.cleanCiphertext(ciphertext)
+XORNumberCipher.buildXorRows(message, key, limit)
+```
+
+`XORCipherTool` is also kept as an alias for compatibility.
+
+Node or AI agent scripts can also require it:
+
+```js
+const XORNumberCipher = require("./js/xor-number-cipher.js");
+
+const ciphertext = XORNumberCipher.encrypt("Hello 中文 😀", "secret-key");
+const plaintext = XORNumberCipher.decrypt(ciphertext, "secret-key");
+```
+
+More details: [docs/library.md](docs/library.md).
 
 ## Regenerate Icons
 

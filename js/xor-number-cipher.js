@@ -1,0 +1,120 @@
+(function (root, factory) {
+  "use strict";
+
+  const api = factory();
+
+  if (typeof module === "object" && module.exports) {
+    module.exports = api;
+  }
+
+  root.XORNumberCipher = api;
+  root.XORCipherTool = api;
+}(typeof globalThis !== "undefined" ? globalThis : window, function () {
+  "use strict";
+
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  function requireValue(value, label) {
+    if (!value) {
+      throw new Error(`${label} is required.`);
+    }
+  }
+
+  function cleanCiphertext(ciphertext) {
+    return String(ciphertext || "").replace(/\s+/g, "");
+  }
+
+  function validateNumberCiphertext(ciphertext) {
+    const clean = cleanCiphertext(ciphertext);
+    requireValue(clean, "Ciphertext");
+
+    if (!/^\d+$/.test(clean)) {
+      throw new Error("Ciphertext must contain numbers only.");
+    }
+
+    if (clean.length % 3 !== 0) {
+      throw new Error("Ciphertext length must be divisible by 3.");
+    }
+
+    for (let i = 0; i < clean.length; i += 3) {
+      const value = Number(clean.slice(i, i + 3));
+      if (value < 0 || value > 255) {
+        throw new Error("Each encrypted number must be between 000 and 255.");
+      }
+    }
+
+    return clean;
+  }
+
+  function formatNumberGroups(ciphertext) {
+    return cleanCiphertext(ciphertext).replace(/(\d{3})(?=\d)/g, "$1 ");
+  }
+
+  function encryptToNumbers(message, key) {
+    requireValue(message, "Message");
+    requireValue(key, "Key");
+
+    const messageBytes = encoder.encode(message);
+    const keyBytes = encoder.encode(key);
+    let output = "";
+
+    for (let i = 0; i < messageBytes.length; i += 1) {
+      const encryptedByte = messageBytes[i] ^ keyBytes[i % keyBytes.length];
+      output += String(encryptedByte).padStart(3, "0");
+    }
+
+    return output;
+  }
+
+  function decryptFromNumbers(ciphertext, key) {
+    requireValue(key, "Key");
+
+    const clean = validateNumberCiphertext(ciphertext);
+    const keyBytes = encoder.encode(key);
+    const outputBytes = [];
+
+    for (let i = 0; i < clean.length; i += 3) {
+      const encryptedByte = Number(clean.slice(i, i + 3));
+      const keyByte = keyBytes[(i / 3) % keyBytes.length];
+      outputBytes.push(encryptedByte ^ keyByte);
+    }
+
+    return decoder.decode(new Uint8Array(outputBytes));
+  }
+
+  function buildXorRows(message, key, limit) {
+    requireValue(key, "Key");
+
+    const messageBytes = encoder.encode(message || "");
+    const keyBytes = encoder.encode(key);
+    const maxRows = Number.isFinite(limit) ? Math.max(0, limit) : messageBytes.length;
+    const rows = [];
+
+    for (let i = 0; i < Math.min(messageBytes.length, maxRows); i += 1) {
+      const messageByte = messageBytes[i];
+      const keyByte = keyBytes[i % keyBytes.length];
+      const xor = messageByte ^ keyByte;
+      rows.push({
+        index: i + 1,
+        messageByte,
+        keyByte,
+        xor,
+        group: String(xor).padStart(3, "0"),
+      });
+    }
+
+    return rows;
+  }
+
+  return {
+    encrypt: encryptToNumbers,
+    decrypt: decryptFromNumbers,
+    encryptToNumbers,
+    decryptFromNumbers,
+    validateNumberCiphertext,
+    formatNumberGroups,
+    cleanCiphertext,
+    buildXorRows,
+  };
+}));

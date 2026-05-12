@@ -17,6 +17,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   min-height: 100dvh;
@@ -112,11 +116,25 @@ h2 {
   gap: 8px;
 }
 
+.field-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 label,
 .section-heading p {
   color: var(--muted);
   font-size: 0.92rem;
   font-weight: 650;
+}
+
+.counter {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  text-align: right;
 }
 
 input,

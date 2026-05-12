@@ -1,0 +1,68 @@
+# Library Usage
+
+The reusable XOR number cipher logic lives in:
+
+```text
+js/xor-number-cipher.js
+```
+
+It has no DOM dependency. The web app UI in `js/app.js` uses this same library.
+
+## Browser Usage
+
+```html
+<script src="./js/xor-number-cipher.js"></script>
+<script>
+  const ciphertext = XORNumberCipher.encrypt("Hello 中文 😀", "secret-key");
+  const plaintext = XORNumberCipher.decrypt(ciphertext, "secret-key");
+
+  console.log(ciphertext);
+  console.log(plaintext);
+</script>
+```
+
+## Node / Agent Script Usage
+
+```js
+const XORNumberCipher = require("./js/xor-number-cipher.js");
+
+const ciphertext = XORNumberCipher.encrypt("Hello 中文 😀", "secret-key");
+const plaintext = XORNumberCipher.decrypt(ciphertext, "secret-key");
+
+console.log(ciphertext);
+console.log(plaintext);
+```
+
+Node 18+ is recommended because it provides `TextEncoder` and `TextDecoder` globally.
+
+## API
+
+```js
+XORNumberCipher.encrypt(message, key)
+XORNumberCipher.decrypt(ciphertext, key)
+XORNumberCipher.encryptToNumbers(message, key)
+XORNumberCipher.decryptFromNumbers(ciphertext, key)
+XORNumberCipher.validateNumberCiphertext(ciphertext)
+XORNumberCipher.formatNumberGroups(ciphertext)
+XORNumberCipher.cleanCiphertext(ciphertext)
+XORNumberCipher.buildXorRows(message, key, limit)
+```
+
+`XORCipherTool` is kept as a browser alias for compatibility.
+
+## Error Behavior
+
+The library throws `Error` for invalid input:
+
+- Empty message during encryption.
+- Empty key.
+- Empty ciphertext.
+- Ciphertext contains non-digit characters after whitespace cleanup.
+- Ciphertext length is not divisible by 3.
+- Any 3-digit group is outside `000` to `255`.
+
+## Security Boundary
+
+This is repeated-key XOR for learning. It is not secure encryption.
+
+Use Web Crypto AES-GCM for real security.

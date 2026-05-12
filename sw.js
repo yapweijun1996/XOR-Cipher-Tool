@@ -1,9 +1,10 @@
-const VERSION = "2026-05-12-1";
+const VERSION = "2026-05-12-2";
 const CACHE_NAME = `xor-cipher-${VERSION}`;
 const PRECACHE_URLS = [
   "./",
   "./index.html",
   "./styles.css",
+  "./js/xor-number-cipher.js",
   "./js/app.js",
   "./manifest.json",
   "./offline.html",
@@ -54,12 +55,14 @@ async function networkFirst(request) {
 
   try {
     const response = await fetch(request);
-    cache.put(request, response.clone());
+    if (response.ok) {
+      cache.put(request, response.clone());
+    }
     return response;
   } catch (error) {
     return (await cache.match(request))
-      || (await cache.match("./index.html"))
-      || (await cache.match("./offline.html"));
+      || (await cache.match("./offline.html"))
+      || (await cache.match("./index.html"));
   }
 }
 
@@ -68,7 +71,9 @@ async function staleWhileRevalidate(request) {
   const cached = await cache.match(request);
   const fetched = fetch(request)
     .then((response) => {
-      cache.put(request, response.clone());
+      if (response.ok) {
+        cache.put(request, response.clone());
+      }
       return response;
     })
     .catch(() => null);

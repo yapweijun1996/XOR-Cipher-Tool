@@ -4,6 +4,45 @@ This project keeps the original demo idea: encrypted output is a numeric string.
 
 The implementation should improve correctness while preserving the number-based output.
 
+## Reusable Library
+
+Core logic lives in a single DOM-free file:
+
+```text
+js/xor-number-cipher.js
+```
+
+This file exposes a global browser API:
+
+```js
+XORNumberCipher.encrypt(message, key)
+XORNumberCipher.decrypt(ciphertext, key)
+XORNumberCipher.encryptToNumbers(message, key)
+XORNumberCipher.decryptFromNumbers(ciphertext, key)
+XORNumberCipher.validateNumberCiphertext(ciphertext)
+XORNumberCipher.formatNumberGroups(ciphertext)
+XORNumberCipher.cleanCiphertext(ciphertext)
+XORNumberCipher.buildXorRows(message, key, limit)
+```
+
+`XORCipherTool` is an alias of the same API for compatibility with earlier demo code.
+
+The library also supports CommonJS:
+
+```js
+const XORNumberCipher = require("./js/xor-number-cipher.js");
+```
+
+Example:
+
+```html
+<script src="./js/xor-number-cipher.js"></script>
+<script>
+  const encrypted = XORNumberCipher.encrypt("Hello 中文 😀", "key中文");
+  const decrypted = XORNumberCipher.decrypt(encrypted, "key中文");
+</script>
+```
+
 ## Encryption Flow
 
 1. Read plaintext message.

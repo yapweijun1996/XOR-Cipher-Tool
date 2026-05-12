@@ -28,6 +28,10 @@ No active implementation task.
 - Added PWA support with manifest, service worker, offline page, and generated icons.
 - Added GitHub Pages deployment workflow.
 - Fixed GitHub Pages first-run workflow configuration by enabling Pages setup and opting JavaScript actions into Node 24.
+- Fixed UI/PWA edge issues found during review: hidden display override, offline fallback order, and clipboard fallback.
+- Extracted XOR number cipher logic into a reusable single-file JavaScript library.
+- Added library documentation for browser and Node/CommonJS usage.
+- Added live plaintext and ciphertext length counters for end users.
 
 ## Blocked
 
@@ -42,3 +46,9 @@ encrypted byte -> 3-digit number -> continuous numeric ciphertext
 ```
 
 The implementation should still use byte-safe Unicode handling with `TextEncoder` and `TextDecoder`.
+
+Library entrypoint:
+
+```text
+js/xor-number-cipher.js
+```

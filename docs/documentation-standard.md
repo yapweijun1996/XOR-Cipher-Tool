@@ -29,6 +29,18 @@ Must include:
 - Validation rules.
 - Known limitations.
 
+### docs/library.md
+
+Audience: engineer or AI agent consuming the cipher as a reusable script.
+
+Must include:
+
+- Browser usage.
+- Node/CommonJS usage.
+- Public API list.
+- Error behavior.
+- Security boundary.
+
 ### docs/pwa-standard.md
 
 Audience: developer adding install/offline support.

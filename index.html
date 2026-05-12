@@ -39,12 +39,18 @@
       </div>
 
       <div class="field">
-        <label for="plainText">Plain text</label>
+        <div class="field-heading">
+          <label for="plainText">Plain text</label>
+          <span class="counter" id="plainCounter">0 chars / 0 bytes</span>
+        </div>
         <textarea id="plainText" placeholder="Enter message, Chinese, emoji, or any Unicode text"></textarea>
       </div>
 
       <div class="field">
-        <label for="cipherText">Number ciphertext</label>
+        <div class="field-heading">
+          <label for="cipherText">Number ciphertext</label>
+          <span class="counter" id="cipherCounter">0 digits / 0 groups</span>
+        </div>
         <textarea id="cipherText" inputmode="numeric" placeholder="Encrypted number output"></textarea>
       </div>
 
@@ -101,6 +107,7 @@
     </div>
   </main>
 
+  <script src="./js/xor-number-cipher.js" defer></script>
   <script src="./js/app.js" defer></script>
 </body>
 </html>

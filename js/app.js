@@ -1,14 +1,16 @@
 (function () {
   "use strict";
 
-  const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
   const MAX_TABLE_ROWS = 24;
+  const cipher = window.XORNumberCipher;
+  const encoder = new TextEncoder();
 
   const els = {
     keyInput: document.getElementById("keyInput"),
     plainText: document.getElementById("plainText"),
     cipherText: document.getElementById("cipherText"),
+    plainCounter: document.getElementById("plainCounter"),
+    cipherCounter: document.getElementById("cipherCounter"),
     encryptButton: document.getElementById("encryptButton"),
     decryptButton: document.getElementById("decryptButton"),
     copyCipherButton: document.getElementById("copyCipherButton"),
@@ -28,93 +30,20 @@
   let deferredInstallPrompt = null;
   let waitingWorker = null;
 
-  function requireValue(value, label) {
-    if (!value) {
-      throw new Error(`${label} is required.`);
-    }
+  function countCodePoints(value) {
+    return Array.from(value).length;
   }
 
-  function cleanCiphertext(ciphertext) {
-    return ciphertext.replace(/\s+/g, "");
-  }
+  function updateCounters() {
+    const plain = els.plainText.value;
+    const cipherValue = els.cipherText.value;
+    const cleanCipher = cipher.cleanCiphertext(cipherValue);
+    const groupCount = cleanCipher.length > 0 && cleanCipher.length % 3 === 0
+      ? cleanCipher.length / 3
+      : 0;
 
-  function validateNumberCiphertext(ciphertext) {
-    const clean = cleanCiphertext(ciphertext);
-    requireValue(clean, "Ciphertext");
-
-    if (!/^\d+$/.test(clean)) {
-      throw new Error("Ciphertext must contain numbers only.");
-    }
-
-    if (clean.length % 3 !== 0) {
-      throw new Error("Ciphertext length must be divisible by 3.");
-    }
-
-    for (let i = 0; i < clean.length; i += 3) {
-      const value = Number(clean.slice(i, i + 3));
-      if (value < 0 || value > 255) {
-        throw new Error("Each encrypted number must be between 000 and 255.");
-      }
-    }
-
-    return clean;
-  }
-
-  function formatNumberGroups(ciphertext) {
-    return cleanCiphertext(ciphertext).replace(/(\d{3})(?=\d)/g, "$1 ");
-  }
-
-  function buildXorRows(message, key) {
-    const messageBytes = encoder.encode(message);
-    const keyBytes = encoder.encode(key);
-    const rows = [];
-
-    for (let i = 0; i < Math.min(messageBytes.length, MAX_TABLE_ROWS); i += 1) {
-      const messageByte = messageBytes[i];
-      const keyByte = keyBytes[i % keyBytes.length];
-      const xor = messageByte ^ keyByte;
-      rows.push({
-        index: i + 1,
-        messageByte,
-        keyByte,
-        xor,
-        group: String(xor).padStart(3, "0"),
-      });
-    }
-
-    return rows;
-  }
-
-  function encryptToNumbers(message, key) {
-    requireValue(message, "Message");
-    requireValue(key, "Key");
-
-    const messageBytes = encoder.encode(message);
-    const keyBytes = encoder.encode(key);
-    let output = "";
-
-    for (let i = 0; i < messageBytes.length; i += 1) {
-      const encryptedByte = messageBytes[i] ^ keyBytes[i % keyBytes.length];
-      output += String(encryptedByte).padStart(3, "0");
-    }
-
-    return output;
-  }
-
-  function decryptFromNumbers(ciphertext, key) {
-    requireValue(key, "Key");
-
-    const clean = validateNumberCiphertext(ciphertext);
-    const keyBytes = encoder.encode(key);
-    const outputBytes = [];
-
-    for (let i = 0; i < clean.length; i += 3) {
-      const encryptedByte = Number(clean.slice(i, i + 3));
-      const keyByte = keyBytes[(i / 3) % keyBytes.length];
-      outputBytes.push(encryptedByte ^ keyByte);
-    }
-
-    return decoder.decode(new Uint8Array(outputBytes));
+    els.plainCounter.textContent = `${countCodePoints(plain)} chars / ${encoder.encode(plain).length} bytes`;
+    els.cipherCounter.textContent = `${cleanCipher.length} digits / ${groupCount} groups`;
   }
 
   function setStatus(message, type) {
@@ -142,14 +71,33 @@
   function refreshCipherDisplay() {
     if (!lastContinuousCipher) return;
     els.cipherText.value = els.groupOutput.checked
-      ? formatNumberGroups(lastContinuousCipher)
+      ? cipher.formatNumberGroups(lastContinuousCipher)
       : lastContinuousCipher;
+    updateCounters();
   }
 
   async function copyValue(value, label) {
-    requireValue(value, label);
-    await navigator.clipboard.writeText(value);
+    if (!value) {
+      throw new Error(`${label} is required.`);
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(value);
+    } else {
+      fallbackCopy(value);
+    }
     setStatus(`${label} copied.`, "success");
+  }
+
+  function fallbackCopy(value) {
+    const textarea = document.createElement("textarea");
+    textarea.value = value;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.top = "-1000px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    textarea.remove();
   }
 
   function handleError(error) {
@@ -160,9 +108,10 @@
     try {
       const message = els.plainText.value;
       const key = els.keyInput.value;
-      lastContinuousCipher = encryptToNumbers(message, key);
+      lastContinuousCipher = cipher.encrypt(message, key);
       refreshCipherDisplay();
-      renderTable(buildXorRows(message, key));
+      renderTable(cipher.buildXorRows(message, key, MAX_TABLE_ROWS));
+      updateCounters();
       setStatus("Encrypted into 3-digit number groups.", "success");
     } catch (error) {
       handleError(error);
@@ -172,11 +121,12 @@
   function onDecrypt() {
     try {
       const key = els.keyInput.value;
-      const decrypted = decryptFromNumbers(els.cipherText.value, key);
+      const decrypted = cipher.decrypt(els.cipherText.value, key);
       els.plainText.value = decrypted;
-      lastContinuousCipher = validateNumberCiphertext(els.cipherText.value);
+      lastContinuousCipher = cipher.validateNumberCiphertext(els.cipherText.value);
       refreshCipherDisplay();
-      renderTable(buildXorRows(decrypted, key));
+      renderTable(cipher.buildXorRows(decrypted, key, MAX_TABLE_ROWS));
+      updateCounters();
       setStatus("Decrypted successfully.", "success");
     } catch (error) {
       handleError(error);
@@ -189,6 +139,7 @@
     els.cipherText.value = "";
     lastContinuousCipher = "";
     renderTable([]);
+    updateCounters();
     setStatus("Cleared.", "success");
   }
 
@@ -202,6 +153,11 @@
       copyValue(els.plainText.value, "Plain text").catch(handleError);
     });
     els.clearButton.addEventListener("click", onClear);
+    els.plainText.addEventListener("input", updateCounters);
+    els.cipherText.addEventListener("input", () => {
+      lastContinuousCipher = "";
+      updateCounters();
+    });
     els.groupOutput.addEventListener("change", refreshCipherDisplay);
     els.showTable.addEventListener("change", () => {
       els.tableSection.hidden = !els.showTable.checked;
@@ -262,13 +218,9 @@
   }
 
   registerEvents();
+  updateCounters();
   setupInstallPrompt();
   setupServiceWorker();
 
-  window.XORCipherTool = {
-    encryptToNumbers,
-    decryptFromNumbers,
-    validateNumberCiphertext,
-    formatNumberGroups,
-  };
+  window.XORCipherTool = cipher;
 }());

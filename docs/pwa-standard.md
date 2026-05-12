@@ -8,6 +8,7 @@ This document defines the minimum PWA standard for the XOR Cipher Tool if instal
 manifest.json
 sw.js
 offline.html
+js/xor-number-cipher.js
 img/icon-192.png
 img/icon-512.png
 img/icon-maskable-512.png
@@ -68,6 +69,8 @@ Recommended strategy:
 - HTML navigation: network-first with offline fallback.
 - CSS, JS, images: stale-while-revalidate.
 - Clear old caches during `activate`.
+
+When adding or renaming JavaScript files, update `PRECACHE_URLS` in `sw.js` and bump the Service Worker `VERSION`.
 
 For form-based tools, prefer showing an update banner instead of forcing silent reloads.
 
