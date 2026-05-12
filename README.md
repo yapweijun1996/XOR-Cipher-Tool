@@ -128,6 +128,8 @@ After pushing to GitHub:
 3. Set Source to `GitHub Actions`.
 4. Push to `main` or run the workflow manually.
 
+If the first workflow run fails with `Get Pages site failed`, keep the workflow's `enablement: true` setting and confirm the repository Pages source is set to GitHub Actions.
+
 ## Development Notes
 
 This project should stay framework-free unless there is a clear reason to add tooling.

@@ -27,6 +27,7 @@ No active implementation task.
 - Added XOR explanation table.
 - Added PWA support with manifest, service worker, offline page, and generated icons.
 - Added GitHub Pages deployment workflow.
+- Fixed GitHub Pages first-run workflow configuration by enabling Pages setup and opting JavaScript actions into Node 24.
 
 ## Blocked
 
