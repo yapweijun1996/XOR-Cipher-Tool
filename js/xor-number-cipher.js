@@ -138,6 +138,29 @@
     return decryptFromNumbers(await unzipNumberCiphertext(zippedCiphertext), key);
   }
 
+  async function encryptToShortestNumbers(message, key) {
+    const normal = encryptToNumbers(message, key);
+    const zipped = await zipNumberCiphertext(normal);
+
+    if (zipped.length < normal.length) {
+      return {
+        ciphertext: zipped,
+        zipped: true,
+        normalLength: normal.length,
+        zippedLength: zipped.length,
+        savedDigits: normal.length - zipped.length,
+      };
+    }
+
+    return {
+      ciphertext: normal,
+      zipped: false,
+      normalLength: normal.length,
+      zippedLength: zipped.length,
+      savedDigits: 0,
+    };
+  }
+
   function buildXorRows(message, key, limit) {
     requireValue(key, "Key");
 
@@ -174,6 +197,7 @@
     unzipNumberCiphertext,
     encryptToZippedNumbers,
     decryptFromZippedNumbers,
+    encryptToShortestNumbers,
     buildXorRows,
   };
 }));

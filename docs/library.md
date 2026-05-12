@@ -49,6 +49,7 @@ await XORNumberCipher.zipNumberCiphertext(ciphertext)
 await XORNumberCipher.unzipNumberCiphertext(zippedCiphertext)
 await XORNumberCipher.encryptToZippedNumbers(message, key)
 await XORNumberCipher.decryptFromZippedNumbers(zippedCiphertext, key)
+await XORNumberCipher.encryptToShortestNumbers(message, key)
 XORNumberCipher.buildXorRows(message, key, limit)
 ```
 
@@ -74,11 +75,14 @@ const plaintext = await XORNumberCipher.decryptFromZippedNumbers(zipped, "secret
 
 The web UI exposes this through the `Zip encrypted output` checkbox. When checked, Encrypt writes zipped numeric ciphertext and Decrypt expects zipped numeric ciphertext.
 
+The UI uses `encryptToShortestNumbers()`, so zip mode only outputs zipped ciphertext if it is shorter than normal ciphertext. If gzip would make the result longer, the UI keeps the normal ciphertext and shows a skip message.
+
 Important:
 
 - The zipped output is still number-only.
 - The zipped output is also grouped as 3 digits per compressed byte.
 - Small messages may become longer after gzip because gzip has header/metadata overhead.
+- Use `encryptToShortestNumbers()` when you want automatic shorter-output selection.
 - This uses `CompressionStream` and `DecompressionStream`, so it needs a modern browser or Node runtime that supports those APIs.
 
 ## Error Behavior

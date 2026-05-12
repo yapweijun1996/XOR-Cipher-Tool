@@ -35,6 +35,7 @@ No active implementation task.
 - Added optional gzip-to-number APIs for long numeric ciphertext.
 - Fixed PWA update flow so waiting Service Workers show reload and update checks bypass cached `sw.js`.
 - Added a UI checkbox for zipped numeric ciphertext mode.
+- Changed zip mode to keep normal ciphertext when gzip would make output longer.
 
 ## Blocked
 

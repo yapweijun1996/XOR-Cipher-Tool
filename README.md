@@ -151,6 +151,7 @@ await XORNumberCipher.zipNumberCiphertext(ciphertext)
 await XORNumberCipher.unzipNumberCiphertext(zippedCiphertext)
 await XORNumberCipher.encryptToZippedNumbers(message, key)
 await XORNumberCipher.decryptFromZippedNumbers(zippedCiphertext, key)
+await XORNumberCipher.encryptToShortestNumbers(message, key)
 XORNumberCipher.buildXorRows(message, key, limit)
 ```
 
@@ -167,7 +168,7 @@ const plaintext = XORNumberCipher.decrypt(ciphertext, "secret-key");
 
 More details: [docs/library.md](docs/library.md).
 
-For very long numeric ciphertext, the optional zip APIs gzip the number string and output the compressed bytes as 3-digit numbers. Small messages may become longer after zipping.
+For very long numeric ciphertext, the optional zip APIs gzip the number string and output the compressed bytes as 3-digit numbers. Small messages may become longer after zipping. In the UI, `Zip encrypted output` only uses zipped output when it is shorter; otherwise it keeps normal numeric ciphertext and shows a skip message.
 
 ## Regenerate Icons
 

@@ -1,4 +1,4 @@
-const VERSION = "2026-05-12-4";
+const VERSION = "2026-05-12-5";
 const CACHE_NAME = `xor-cipher-${VERSION}`;
 const PRECACHE_URLS = [
   "./",

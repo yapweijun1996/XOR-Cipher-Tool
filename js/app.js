@@ -125,16 +125,27 @@
     try {
       const message = els.plainText.value;
       const key = els.keyInput.value;
-      lastCipherIsZipped = els.zipOutput.checked;
-      lastContinuousCipher = lastCipherIsZipped
-        ? await cipher.encryptToZippedNumbers(message, key)
-        : cipher.encrypt(message, key);
+      let result = null;
+
+      if (els.zipOutput.checked) {
+        result = await cipher.encryptToShortestNumbers(message, key);
+        lastCipherIsZipped = result.zipped;
+        lastContinuousCipher = result.ciphertext;
+      } else {
+        lastCipherIsZipped = false;
+        lastContinuousCipher = cipher.encrypt(message, key);
+      }
+
       refreshCipherDisplay();
       renderTable(cipher.buildXorRows(message, key, MAX_TABLE_ROWS));
       updateCounters();
-      setStatus(lastCipherIsZipped
-        ? "Encrypted and zipped into 3-digit number groups."
-        : "Encrypted into 3-digit number groups.", "success");
+      if (result && result.zipped) {
+        setStatus(`Encrypted and zipped. Saved ${result.savedDigits} digits.`, "success");
+      } else if (result && !result.zipped) {
+        setStatus(`Zip skipped: zipped output would be longer (${result.zippedLength} vs ${result.normalLength} digits).`, "success");
+      } else {
+        setStatus("Encrypted into 3-digit number groups.", "success");
+      }
     } catch (error) {
       handleError(error);
     }
