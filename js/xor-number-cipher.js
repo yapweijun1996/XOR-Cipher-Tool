@@ -201,6 +201,78 @@
     };
   }
 
+  async function encryptBestNumbers(message, key) {
+    requireValue(message, "Message");
+    requireValue(key, "Key");
+
+    const normal = encryptToNumbers(message, key);
+    const compressed = await encryptCompressedToNumbers(message, key);
+    const doubleCompressed = await zipNumberCiphertext(compressed);
+    const candidates = [
+      {
+        mode: "000",
+        modeName: "normal",
+        payload: normal,
+      },
+      {
+        mode: "001",
+        modeName: "gzip-before-encrypt",
+        payload: compressed,
+      },
+      {
+        mode: "002",
+        modeName: "gzip-before-encrypt-plus-gzip",
+        payload: doubleCompressed,
+      },
+    ].map((candidate) => ({
+      ...candidate,
+      ciphertext: `${candidate.mode}${candidate.payload}`,
+      length: candidate.payload.length + 3,
+    }));
+    const best = candidates.reduce((winner, candidate) => (
+      candidate.length < winner.length ? candidate : winner
+    ));
+
+    return {
+      ciphertext: best.ciphertext,
+      mode: best.mode,
+      modeName: best.modeName,
+      normalLength: candidates[0].length,
+      compressedLength: candidates[1].length,
+      doubleCompressedLength: candidates[2].length,
+      selectedLength: best.length,
+      savedDigits: Math.max(0, candidates[0].length - best.length),
+      candidates,
+    };
+  }
+
+  async function decryptBestNumbers(ciphertext, key) {
+    requireValue(key, "Key");
+
+    const clean = validateNumberCiphertext(ciphertext);
+    if (clean.length < 6) {
+      throw new Error("Best ciphertext must include a 3-digit mode header and payload.");
+    }
+
+    const mode = clean.slice(0, 3);
+    const payload = clean.slice(3);
+
+    if (mode === "000") {
+      return decryptFromNumbers(payload, key);
+    }
+
+    if (mode === "001") {
+      return await decryptCompressedFromNumbers(payload, key);
+    }
+
+    if (mode === "002") {
+      const compressedCiphertext = await unzipNumberCiphertext(payload);
+      return await decryptCompressedFromNumbers(compressedCiphertext, key);
+    }
+
+    throw new Error(`Unsupported best ciphertext mode: ${mode}.`);
+  }
+
   function buildXorRows(message, key, limit) {
     requireValue(key, "Key");
 
@@ -242,6 +314,8 @@
     encryptCompressedToNumbers,
     decryptCompressedFromNumbers,
     encryptToShortestNumbers,
+    encryptBestNumbers,
+    decryptBestNumbers,
     buildXorRows,
   };
 }));

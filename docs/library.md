@@ -52,6 +52,8 @@ await XORNumberCipher.decryptFromZippedNumbers(zippedCiphertext, key)
 await XORNumberCipher.encryptCompressedToNumbers(message, key)
 await XORNumberCipher.decryptCompressedFromNumbers(ciphertext, key)
 await XORNumberCipher.encryptToShortestNumbers(message, key)
+await XORNumberCipher.encryptBestNumbers(message, key)
+await XORNumberCipher.decryptBestNumbers(ciphertext, key)
 XORNumberCipher.buildXorRows(message, key, limit)
 ```
 
@@ -87,7 +89,26 @@ Important:
 - Use `encryptToShortestNumbers()` when you want automatic shorter-output selection.
 - This uses `CompressionStream` and `DecompressionStream`, so it needs a modern browser or Node runtime that supports those APIs.
 
-Legacy note: `zipNumberCiphertext()` gzips the already-encrypted number string. It remains available for agents that need it, but it is less efficient than `encryptCompressedToNumbers()` for most text.
+## Best Mode
+
+Best mode compares three numeric formats and returns the shortest:
+
+```text
+000 = normal XOR number ciphertext
+001 = gzip plaintext -> XOR compressed bytes -> number ciphertext
+002 = gzip plaintext -> XOR compressed bytes -> gzip number ciphertext -> number ciphertext
+```
+
+Example:
+
+```js
+const result = await XORNumberCipher.encryptBestNumbers(message, key);
+const plaintext = await XORNumberCipher.decryptBestNumbers(result.ciphertext, key);
+```
+
+`decryptBestNumbers()` reads the first 3-digit group as the mode header.
+
+Legacy note: `zipNumberCiphertext()` gzips the already-encrypted number string. It remains available for agents that need it, but `encryptBestNumbers()` should be the default for shortest output.
 
 ## Error Behavior
 

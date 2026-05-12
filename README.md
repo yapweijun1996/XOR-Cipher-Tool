@@ -154,6 +154,8 @@ await XORNumberCipher.decryptFromZippedNumbers(zippedCiphertext, key)
 await XORNumberCipher.encryptCompressedToNumbers(message, key)
 await XORNumberCipher.decryptCompressedFromNumbers(ciphertext, key)
 await XORNumberCipher.encryptToShortestNumbers(message, key)
+await XORNumberCipher.encryptBestNumbers(message, key)
+await XORNumberCipher.decryptBestNumbers(ciphertext, key)
 XORNumberCipher.buildXorRows(message, key, limit)
 ```
 
@@ -170,7 +172,7 @@ const plaintext = XORNumberCipher.decrypt(ciphertext, "secret-key");
 
 More details: [docs/library.md](docs/library.md).
 
-For very long text, the UI gzips plaintext before XOR encryption and uses that output only when shorter. Small messages may become longer after gzip, so the UI keeps normal numeric ciphertext and shows a skip message.
+For very long text, the UI can auto-select the shortest format. Best mode prefixes output with a 3-digit mode header: `000` normal, `001` gzip-before-encrypt, `002` gzip-before-encrypt then gzip again.
 
 ## Regenerate Icons
 

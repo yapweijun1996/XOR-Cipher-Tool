@@ -36,6 +36,7 @@ No active implementation task.
 - Fixed PWA update flow so waiting Service Workers show reload and update checks bypass cached `sw.js`.
 - Added a UI checkbox for zipped numeric ciphertext mode.
 - Changed zip mode to gzip plaintext before XOR encryption and keep normal ciphertext when gzip would make output longer.
+- Added best mode with 000/001/002 headers for normal, gzip-before-encrypt, and gzip+encrypt+gzip.
 
 ## Blocked
 

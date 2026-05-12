@@ -50,8 +50,8 @@
 
   function updateModeLabels() {
     if (els.zipOutput.checked) {
-      els.encryptButton.textContent = "Gzip + Encrypt";
-      els.decryptButton.textContent = "Decrypt + Gunzip";
+      els.encryptButton.textContent = "Encrypt Best";
+      els.decryptButton.textContent = "Decrypt Best";
     } else {
       els.encryptButton.textContent = "Encrypt to Numbers";
       els.decryptButton.textContent = "Decrypt from Numbers";
@@ -128,8 +128,8 @@
       let result = null;
 
       if (els.zipOutput.checked) {
-        result = await cipher.encryptToShortestNumbers(message, key);
-        lastCipherIsZipped = result.zipped;
+        result = await cipher.encryptBestNumbers(message, key);
+        lastCipherIsZipped = result.mode !== "000";
         lastContinuousCipher = result.ciphertext;
       } else {
         lastCipherIsZipped = false;
@@ -139,10 +139,8 @@
       refreshCipherDisplay();
       renderTable(cipher.buildXorRows(message, key, MAX_TABLE_ROWS));
       updateCounters();
-      if (result && result.zipped) {
-        setStatus(`Encrypted and zipped. Saved ${result.savedDigits} digits.`, "success");
-      } else if (result && !result.zipped) {
-        setStatus(`Zip skipped: zipped output would be longer (${result.zippedLength} vs ${result.normalLength} digits).`, "success");
+      if (result) {
+        setStatus(`Best mode ${result.mode} (${result.modeName}). Selected ${result.selectedLength} digits; saved ${result.savedDigits} digits.`, "success");
       } else {
         setStatus("Encrypted into 3-digit number groups.", "success");
       }
@@ -155,7 +153,7 @@
     try {
       const key = els.keyInput.value;
       const decrypted = els.zipOutput.checked
-        ? await cipher.decryptCompressedFromNumbers(els.cipherText.value, key)
+        ? await cipher.decryptBestNumbers(els.cipherText.value, key)
         : cipher.decrypt(els.cipherText.value, key);
       els.plainText.value = decrypted;
       lastContinuousCipher = cipher.validateNumberCiphertext(els.cipherText.value);
@@ -205,8 +203,8 @@
     els.zipOutput.addEventListener("change", () => {
       updateModeLabels();
       setStatus(els.zipOutput.checked
-        ? "Gzip mode enabled. Ciphertext must be gzip-before-encrypt numbers when decrypting."
-        : "Zip mode disabled. Ciphertext must be normal numbers when decrypting.", "");
+        ? "Best mode enabled. Output includes a 000/001/002 mode header."
+        : "Best mode disabled. Ciphertext must be normal numbers when decrypting.", "");
     });
     els.showTable.addEventListener("change", () => {
       els.tableSection.hidden = !els.showTable.checked;
